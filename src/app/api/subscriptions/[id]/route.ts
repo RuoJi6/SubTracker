@@ -62,18 +62,17 @@ export async function PUT(
       }
     }
 
-    // Re-fetch exchange rate if currency or startDate changed
+    // Always refresh exchange rate on save when currency differs
     const existing = await prisma.subscription.findUnique({ where: { id } });
     let newExchangeRate = body.exchangeRateAtPurchase;
-    if (existing && (body.currency || body.startDate)) {
+    if (existing) {
       const currency = body.currency || existing.currency;
       const startDate = body.startDate || existing.startDate;
       const displayCurrency = (
         await prisma.globalSettings.findUnique({ where: { id: 'global' } })
       )?.displayCurrency || 'CNY';
 
-      if (currency !== displayCurrency &&
-          (body.currency !== existing.currency || body.startDate !== existing.startDate.toISOString())) {
+      if (currency !== displayCurrency) {
         try {
           newExchangeRate = await fetchExchangeRate(
             currency,
@@ -82,7 +81,10 @@ export async function PUT(
           );
         } catch {
           // Keep existing rate on failure
+          newExchangeRate = newExchangeRate ?? existing.exchangeRateAtPurchase;
         }
+      } else {
+        newExchangeRate = null;
       }
     }
 
