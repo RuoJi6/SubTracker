@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 
 interface Subscription {
   id: string;
@@ -31,6 +31,7 @@ interface Subscription {
 export function useSubscriptions() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(false);
+  const { message } = App.useApp();
 
   const fetchSubscriptions = useCallback(async (params?: { active?: boolean; category?: string }) => {
     setLoading(true);
@@ -51,7 +52,7 @@ export function useSubscriptions() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [message]);
 
   const createSubscription = useCallback(async (body: Record<string, unknown>) => {
     try {
@@ -72,7 +73,7 @@ export function useSubscriptions() {
       message.error('Network error');
       return null;
     }
-  }, []);
+  }, [message]);
 
   const updateSubscription = useCallback(async (id: string, body: Record<string, unknown>) => {
     try {
@@ -93,7 +94,7 @@ export function useSubscriptions() {
       message.error('Network error');
       return null;
     }
-  }, []);
+  }, [message]);
 
   const deleteSubscription = useCallback(async (id: string) => {
     try {
@@ -111,7 +112,7 @@ export function useSubscriptions() {
       message.error('Network error');
       return false;
     }
-  }, []);
+  }, [message]);
 
   return {
     subscriptions,
