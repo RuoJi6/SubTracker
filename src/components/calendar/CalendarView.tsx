@@ -39,6 +39,18 @@ function getRenewalDatesInRange(
   const next = dayjs(sub.nextRenewalDate).startOf('day');
   const dates: Dayjs[] = [];
 
+  // ONE_TIME: only show on the exact date, no projection
+  if (cycleDays <= 0) {
+    if (
+      (next.isAfter(rangeStart) || next.isSame(rangeStart, 'day')) &&
+      (next.isBefore(rangeEnd) || next.isSame(rangeEnd, 'day'))
+    ) {
+      dates.push(next);
+    }
+    return dates;
+  }
+
+  // Backward from nextRenewalDate
   let d = next;
   while (d.isAfter(rangeStart) || d.isSame(rangeStart, 'day')) {
     if (d.isBefore(rangeEnd) || d.isSame(rangeEnd, 'day')) {
@@ -48,6 +60,7 @@ function getRenewalDatesInRange(
     if (d.isBefore(rangeStart.subtract(1, 'day'))) break;
   }
 
+  // Forward from nextRenewalDate
   d = next.add(cycleDays, 'day');
   while (d.isBefore(rangeEnd) || d.isSame(rangeEnd, 'day')) {
     if (d.isAfter(rangeStart) || d.isSame(rangeStart, 'day')) {

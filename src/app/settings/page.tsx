@@ -574,13 +574,11 @@ export default function SettingsPage() {
             <div className="flex flex-wrap gap-2">
               {paymentMethods.map((m) => (
                 <AlertDialog key={m.id}>
-                  <AlertDialogTrigger render={
-                    <Badge variant="secondary" className="cursor-pointer gap-1 py-1 px-2 text-sm">
-                      <Wallet className="size-3" />
-                      {m.name}
-                      <X className="size-3 ml-1 opacity-60 hover:opacity-100" />
-                    </Badge>
-                  } />
+                  <AlertDialogTrigger className="inline-flex items-center rounded-md border border-transparent bg-secondary text-secondary-foreground cursor-pointer gap-1 py-1 px-2 text-sm font-semibold hover:bg-secondary/80 transition-colors">
+                    <Wallet className="size-3" />
+                    {m.name}
+                    <X className="size-3 ml-1 opacity-60 hover:opacity-100" />
+                  </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>{t('settings.deletePaymentMethodConfirm')}</AlertDialogTitle>
