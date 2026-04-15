@@ -88,6 +88,16 @@ docker run -d -p 3000:3000 \
   ghcr.io/ruoji6/subtracker:latest
 ```
 
+> 🚀 **国内加速拉取**：使用 [Xget](https://github.com/xixu-me/xget) 镜像加速
+> ```bash
+> # 配置 Xget 作为 registry mirror（将 xget.xi-xu.me 替换为你的自部署地址）
+> # /etc/docker/daemon.json
+> {
+>   "registry-mirrors": ["https://xget.xi-xu.me/cr/ghcr"]
+> }
+> # 然后正常拉取即可：docker pull ghcr.io/ruoji6/subtracker:latest
+> ```
+
 #### 方式二：本地构建
 
 ```bash
