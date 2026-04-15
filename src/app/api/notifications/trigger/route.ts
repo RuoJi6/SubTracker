@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { checkAndSendNotifications } from '@/lib/notification/scheduler';
+import { advanceExpiredRenewals } from '@/lib/renewal';
 
 // Manual trigger endpoint for notification checks
 export async function GET(request: Request) {
@@ -11,11 +12,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const result = await checkAndSendNotifications();
+  // Advance expired renewals first
+  const renewalResult = await advanceExpiredRenewals();
+  const notifResult = await checkAndSendNotifications();
 
   return NextResponse.json({
     success: true,
-    data: result,
+    data: {
+      ...notifResult,
+      renewalsAdvanced: renewalResult.advanced,
+      ratesUpdated: renewalResult.ratesUpdated,
+    },
     timestamp: new Date().toISOString(),
   });
 }

@@ -52,3 +52,35 @@ export function getCycleDays(cycle: string, customDays?: number): number {
     default: return 30;
   }
 }
+
+/**
+ * Calculate the next renewal date from a given date based on cycle type.
+ * Advances by one cycle period.
+ */
+export function calcNextRenewalDate(
+  fromDate: Date,
+  cycle: string,
+  customCycleDays?: number | null
+): Date {
+  const d = new Date(fromDate);
+  switch (cycle) {
+    case 'WEEKLY':
+      d.setDate(d.getDate() + 7);
+      break;
+    case 'MONTHLY':
+      d.setMonth(d.getMonth() + 1);
+      break;
+    case 'QUARTERLY':
+      d.setMonth(d.getMonth() + 3);
+      break;
+    case 'YEARLY':
+      d.setFullYear(d.getFullYear() + 1);
+      break;
+    case 'CUSTOM':
+      d.setDate(d.getDate() + (customCycleDays || 30));
+      break;
+    default:
+      d.setMonth(d.getMonth() + 1);
+  }
+  return d;
+}
