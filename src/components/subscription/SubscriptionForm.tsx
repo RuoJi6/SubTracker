@@ -19,6 +19,11 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/date-picker';
 
@@ -71,6 +76,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ ...defaultForm });
   const [customMethods, setCustomMethods] = useState<Array<{ id: string; name: string }>>([]);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
 
   const updateField = <K extends keyof typeof defaultForm>(key: K, value: (typeof defaultForm)[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -209,20 +215,36 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
             </div>
             <div className="space-y-1.5">
               <Label>{t('subscription.currency')}</Label>
-              <Select value={form.currency} onValueChange={(v) => updateField('currency', v ?? 'USD')}>
-                <SelectTrigger>
-                  <SelectValue>
-                    {(() => { const c = currencies.find(cur => cur.code === form.currency); return c ? `${c.symbol} ${c.code} - ${c.nameZh}` : form.currency; })()}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {currencies.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.symbol} {c.code} - {c.nameZh}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={currencyOpen} onOpenChange={setCurrencyOpen}>
+                <PopoverTrigger
+                  render={
+                    <Button variant="outline" className="w-full justify-between font-normal" />
+                  }
+                >
+                  {(() => { const c = currencies.find(cur => cur.code === form.currency); return c ? `${c.symbol} ${c.code} - ${locale === 'zh' ? c.nameZh : c.code}` : form.currency; })()}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </PopoverTrigger>
+                <PopoverContent className="w-[280px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder={locale === 'zh' ? '搜索货币...' : 'Search currency...'} />
+                    <CommandList>
+                      <CommandEmpty>{locale === 'zh' ? '未找到货币' : 'No currency found'}</CommandEmpty>
+                      <CommandGroup>
+                        {currencies.map((c) => (
+                          <CommandItem
+                            key={c.code}
+                            value={`${c.code} ${c.nameZh} ${c.name} ${c.symbol}`}
+                            onSelect={() => { updateField('currency', c.code); setCurrencyOpen(false); }}
+                            data-checked={form.currency === c.code}
+                          >
+                            {c.symbol} {c.code} - {locale === 'zh' ? c.nameZh : c.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
