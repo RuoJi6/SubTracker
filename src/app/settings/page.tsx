@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, Form, Input, InputNumber, Select, Button, Typography, Divider, Space, Alert, Popconfirm, App, Tag, Empty } from 'antd';
-import { CopyOutlined, ReloadOutlined, PlusOutlined, WalletOutlined } from '@ant-design/icons';
+import { CopyOutlined, ReloadOutlined, PlusOutlined, WalletOutlined, SendOutlined } from '@ant-design/icons';
 import { useI18n } from '@/hooks/useI18n';
 import { currencies } from '@/lib/currency';
 
@@ -17,6 +17,8 @@ export default function SettingsPage() {
   const [paymentMethods, setPaymentMethods] = useState<Array<{ id: string; name: string }>>([]);
   const [newMethodName, setNewMethodName] = useState('');
   const [addingMethod, setAddingMethod] = useState(false);
+  const [testingDingtalk, setTestingDingtalk] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
   const { message } = App.useApp();
 
   const calendarUrl = typeof window !== 'undefined' && calendarToken
@@ -132,6 +134,66 @@ export default function SettingsPage() {
     }
   };
 
+  const testDingtalk = async () => {
+    const values = form.getFieldsValue();
+    if (!values.dingtalkWebhook) {
+      message.error(t('settings.testFailed'));
+      return;
+    }
+    setTestingDingtalk(true);
+    try {
+      const res = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'dingtalk', webhook: values.dingtalkWebhook, secret: values.dingtalkSecret }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        message.success(t('settings.testSuccess'));
+      } else {
+        message.error(data.error || t('settings.testFailed'));
+      }
+    } catch {
+      message.error(t('settings.testFailed'));
+    } finally {
+      setTestingDingtalk(false);
+    }
+  };
+
+  const testEmail = async () => {
+    const values = form.getFieldsValue();
+    if (!values.smtpHost || !values.smtpPort || !values.smtpUser || !values.smtpPass || !values.emailFrom || !values.emailTo) {
+      message.error(t('settings.testFailed'));
+      return;
+    }
+    setTestingEmail(true);
+    try {
+      const res = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'email',
+          smtpHost: values.smtpHost,
+          smtpPort: values.smtpPort,
+          smtpUser: values.smtpUser,
+          smtpPass: values.smtpPass,
+          emailFrom: values.emailFrom,
+          emailTo: values.emailTo,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        message.success(t('settings.testSuccess'));
+      } else {
+        message.error(data.error || t('settings.testFailed'));
+      }
+    } catch {
+      message.error(t('settings.testFailed'));
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
       <Title level={3}>{t('settings.title')}</Title>
@@ -175,7 +237,17 @@ export default function SettingsPage() {
         </Card>
 
         <Card style={{ marginBottom: 16 }}>
-          <Title level={5}>{t('settings.dingtalkConfig')}</Title>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Title level={5} style={{ margin: 0 }}>{t('settings.dingtalkConfig')}</Title>
+            <Button
+              icon={<SendOutlined />}
+              onClick={testDingtalk}
+              loading={testingDingtalk}
+              size="small"
+            >
+              {t('settings.testConnection')}
+            </Button>
+          </div>
           <Form.Item name="dingtalkWebhook" label={t('notification.webhook')}>
             <Input placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." />
           </Form.Item>
@@ -185,7 +257,17 @@ export default function SettingsPage() {
         </Card>
 
         <Card style={{ marginBottom: 16 }}>
-          <Title level={5}>{t('settings.emailConfig')}</Title>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Title level={5} style={{ margin: 0 }}>{t('settings.emailConfig')}</Title>
+            <Button
+              icon={<SendOutlined />}
+              onClick={testEmail}
+              loading={testingEmail}
+              size="small"
+            >
+              {t('settings.testConnection')}
+            </Button>
+          </div>
           <Space style={{ display: 'flex', flexWrap: 'wrap' }} size="large">
             <Form.Item name="smtpHost" label={t('settings.smtpHost')} style={{ minWidth: 200 }}>
               <Input placeholder="smtp.gmail.com" />
