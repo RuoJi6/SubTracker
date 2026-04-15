@@ -2,10 +2,12 @@
 
 import React from 'react';
 import { Card, Tag, Typography, Space, Button, Popconfirm } from 'antd';
-import { EditOutlined, DeleteOutlined, LinkOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, LinkOutlined, ClockCircleOutlined, WalletOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useI18n } from '@/hooks/useI18n';
 import { getCurrencySymbol, getCycleLabel } from '@/lib/currency';
+
+const PRESET_PAYMENT_METHODS = ['alipay', 'wechat', 'credit_card', 'debit_card', 'paypal', 'apple_pay', 'google_pay', 'bank_transfer', 'crypto'];
 
 const { Text, Title } = Typography;
 
@@ -19,6 +21,7 @@ interface SubscriptionCardProps {
     nextRenewalDate: string;
     isActive: boolean;
     category?: string | null;
+    paymentMethod?: string | null;
     url?: string | null;
     description?: string | null;
   };
@@ -86,6 +89,13 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete }: Sub
         <Tag>{dayjs(subscription.nextRenewalDate).format('YYYY-MM-DD')}</Tag>
         {subscription.category && (
           <Tag color="blue">{t(`subscription.categories.${subscription.category}`)}</Tag>
+        )}
+        {subscription.paymentMethod && (
+          <Tag icon={<WalletOutlined />} color="purple">
+            {PRESET_PAYMENT_METHODS.includes(subscription.paymentMethod)
+              ? t(`subscription.paymentMethods.${subscription.paymentMethod}`)
+              : subscription.paymentMethod}
+          </Tag>
         )}
         {!subscription.isActive && <Tag color="default">{t('common.inactive')}</Tag>}
       </Space>

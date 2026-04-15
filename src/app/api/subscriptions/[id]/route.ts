@@ -74,6 +74,7 @@ export async function PUT(
         nextRenewalDate: body.nextRenewalDate ? new Date(body.nextRenewalDate) : undefined,
         url: body.url,
         category: body.category,
+        paymentMethod: body.paymentMethod,
         isActive: body.isActive,
         exchangeRateAtPurchase: body.exchangeRateAtPurchase,
         notes: body.notes,

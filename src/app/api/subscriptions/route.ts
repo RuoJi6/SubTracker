@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
         nextRenewalDate: new Date(body.nextRenewalDate),
         url: body.url || null,
         category: body.category || null,
+        paymentMethod: body.paymentMethod || null,
         isActive: body.isActive ?? true,
         exchangeRateAtPurchase: exchangeRateAtPurchase ?? null,
         notes: body.notes || null,

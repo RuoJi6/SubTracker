@@ -17,6 +17,7 @@ interface SubscriptionFormProps {
 
 const cycleOptions = ['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM'];
 const categoryOptions = ['development', 'design', 'productivity', 'entertainment', 'cloud', 'communication', 'education', 'other'];
+const paymentMethodOptions = ['alipay', 'wechat', 'credit_card', 'debit_card', 'paypal', 'apple_pay', 'google_pay', 'bank_transfer', 'crypto'];
 
 function calcNextRenewal(startDate: Dayjs, cycle: string, customDays?: number): Dayjs {
   switch (cycle) {
@@ -46,12 +47,16 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
 
   useEffect(() => {
     if (open && initialValues) {
+      const existingPayment = initialValues.paymentMethod as string | null;
+      const isPreset = existingPayment && paymentMethodOptions.includes(existingPayment);
       form.setFieldsValue({
         ...initialValues,
         startDate: initialValues.startDate ? dayjs(initialValues.startDate as string) : dayjs(),
         nextRenewalDate: initialValues.nextRenewalDate ? dayjs(initialValues.nextRenewalDate as string) : dayjs().add(1, 'month'),
         notifyDaysBefore: initialValues.notifyDaysBefore || [1],
         notifyTime: initialValues.notifyTime ? dayjs(initialValues.notifyTime as string, 'HH:mm') : dayjs('09:00', 'HH:mm'),
+        paymentMethod: isPreset ? existingPayment : existingPayment ? '__custom__' : undefined,
+        customPaymentMethod: isPreset ? undefined : existingPayment,
       });
       setCycle((initialValues.cycle as string) || 'MONTHLY');
     } else if (open) {
@@ -89,8 +94,13 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
       const values = await form.validateFields();
       setLoading(true);
 
+      const paymentMethod = values.paymentMethod === '__custom__'
+        ? values.customPaymentMethod
+        : values.paymentMethod || null;
+
       const payload = {
         ...values,
+        paymentMethod,
         startDate: (values.startDate as Dayjs).toISOString(),
         nextRenewalDate: (values.nextRenewalDate as Dayjs).toISOString(),
         notifications: values.notifyEnabled
@@ -114,6 +124,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
       delete payload.notifyDaysBefore;
       delete payload.notifyTime;
       delete payload.notifyEnabled;
+      delete payload.customPaymentMethod;
 
       await onSubmit(payload);
       onClose();
@@ -191,6 +202,34 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
               label: t(`subscription.categories.${c}`),
             }))}
           />
+        </Form.Item>
+
+        <Form.Item name="paymentMethod" label={t('subscription.paymentMethod')}>
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            options={[
+              ...paymentMethodOptions.map((p) => ({
+                value: p,
+                label: t(`subscription.paymentMethods.${p}`),
+              })),
+              { value: '__custom__', label: t('subscription.customPaymentMethod') },
+            ]}
+          />
+        </Form.Item>
+
+        <Form.Item
+          noStyle
+          shouldUpdate={(prev, cur) => prev.paymentMethod !== cur.paymentMethod}
+        >
+          {({ getFieldValue }) =>
+            getFieldValue('paymentMethod') === '__custom__' ? (
+              <Form.Item name="customPaymentMethod" label={t('subscription.customPaymentMethod')} rules={[{ required: true }]}>
+                <Input placeholder={t('subscription.customPaymentMethod')} />
+              </Form.Item>
+            ) : null
+          }
         </Form.Item>
 
         <Form.Item name="url" label={t('subscription.url')}>
