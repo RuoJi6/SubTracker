@@ -33,18 +33,18 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Install only prisma CLI for migrate deploy (pinned version)
-RUN npm install --no-save prisma@6.19.3
+RUN npm install --no-save prisma@6.19.3 && npm cache clean --force
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 
-# Set the correct permission for prerender cache
-RUN mkdir -p .next data
+# Copy standalone build
+RUN mkdir -p .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Create data directory for SQLite
-RUN chown -R nextjs:nodejs /app/data
+# Create data directory for SQLite (after standalone copy to avoid overwrite)
+RUN mkdir -p /app/prisma/data && chown -R nextjs:nodejs /app/prisma/data
 
 USER nextjs
 
@@ -52,6 +52,6 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV DATABASE_URL="file:./data/subtracker.db"
+ENV DATABASE_URL="file:/app/prisma/data/subtracker.db"
 
 CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
