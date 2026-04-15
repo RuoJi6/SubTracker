@@ -117,12 +117,12 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete, onRen
   return (
     <Card
       className={cn(
-        'glass-card rounded-xl border-l-4 transition-shadow hover:shadow-lg',
+        'glass-card rounded-xl border-l-4 gap-2 transition-shadow hover:shadow-lg',
         urgencyClasses[urgencyKey].split(' ')[0],
         !subscription.isActive && 'opacity-60',
       )}
     >
-      <CardContent className="pt-4">
+      <CardContent className="pt-3 pb-0">
         {/* Header: name + amount */}
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
@@ -271,14 +271,15 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete, onRen
           </AlertDialogContent>
         </AlertDialog>
 
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          disabled={!subscription.url}
-          onClick={() => subscription.url && window.open(subscription.url, '_blank')}
-        >
-          <ExternalLink className="size-4" />
-        </Button>
+        {subscription.url && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => window.open(subscription.url!, '_blank')}
+          >
+            <ExternalLink className="size-4" />
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

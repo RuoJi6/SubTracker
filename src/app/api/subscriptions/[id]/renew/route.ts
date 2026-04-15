@@ -26,7 +26,10 @@ export async function POST(
       );
     }
 
-    const current = dayjs(sub.nextRenewalDate);
+    // If the subscription is overdue, calculate from today instead of the old date
+    const base = dayjs(sub.nextRenewalDate);
+    const today = dayjs().startOf('day');
+    const current = base.isBefore(today) ? today : base;
     let next: dayjs.Dayjs;
 
     switch (sub.cycle) {
