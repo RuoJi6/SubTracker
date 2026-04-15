@@ -22,6 +22,7 @@ interface Subscription {
   startDate: string;
   cycle: string;
   customCycleDays?: number | null;
+  autoRenew?: boolean;
   isActive: boolean;
   category?: string | null;
 }
@@ -29,23 +30,55 @@ interface Subscription {
 interface RenewalEvent {
   sub: Subscription;
   date: Dayjs;
+  projected?: boolean;
 }
 
-// Only show the exact nextRenewalDate — no automatic projection.
-// Users must manually renew to advance the date.
+function addOneCycle(d: Dayjs, cycle: string, customDays?: number | null): Dayjs {
+  switch (cycle) {
+    case 'WEEKLY': return d.add(1, 'week');
+    case 'MONTHLY': return d.add(1, 'month');
+    case 'QUARTERLY': return d.add(3, 'month');
+    case 'YEARLY': return d.add(1, 'year');
+    case 'CUSTOM': return d.add(customDays || 30, 'day');
+    default: return d.add(1, 'month');
+  }
+}
+
+// For manual subscriptions: only show nextRenewalDate.
+// For auto-renew subscriptions: project future dates across the range.
 function getRenewalDatesInRange(
   sub: Subscription,
   rangeStart: Dayjs,
   rangeEnd: Dayjs
-): Dayjs[] {
+): { date: Dayjs; projected: boolean }[] {
   const next = dayjs(sub.nextRenewalDate).startOf('day');
-  if (
-    (next.isAfter(rangeStart) || next.isSame(rangeStart, 'day')) &&
-    (next.isBefore(rangeEnd) || next.isSame(rangeEnd, 'day'))
-  ) {
-    return [next];
+
+  if (!sub.autoRenew || sub.cycle === 'ONE_TIME') {
+    // Manual: only show the exact nextRenewalDate
+    if (
+      (next.isAfter(rangeStart) || next.isSame(rangeStart, 'day')) &&
+      (next.isBefore(rangeEnd) || next.isSame(rangeEnd, 'day'))
+    ) {
+      return [{ date: next, projected: false }];
+    }
+    return [];
   }
-  return [];
+
+  // Auto-renew: project from nextRenewalDate forward (and show nextRenewalDate itself)
+  const results: { date: Dayjs; projected: boolean }[] = [];
+  let cursor = next;
+  const limit = 120; // safety limit
+  let count = 0;
+
+  while (cursor.isBefore(rangeEnd) || cursor.isSame(rangeEnd, 'day')) {
+    if (cursor.isAfter(rangeStart) || cursor.isSame(rangeStart, 'day')) {
+      results.push({ date: cursor, projected: !cursor.isSame(next, 'day') });
+    }
+    cursor = addOneCycle(cursor, sub.cycle, sub.customCycleDays);
+    count++;
+    if (count > limit) break;
+  }
+  return results;
 }
 
 const WEEKDAYS_ZH = ['日', '一', '二', '三', '四', '五', '六'];
@@ -105,11 +138,11 @@ export default function CalendarView() {
 
     for (const sub of subscriptions) {
       if (!sub.isActive) continue;
-      const dates = getRenewalDatesInRange(sub, rangeStart, rangeEnd);
-      for (const d of dates) {
+      const entries = getRenewalDatesInRange(sub, rangeStart, rangeEnd);
+      for (const { date: d, projected } of entries) {
         const key = d.format('YYYY-MM-DD');
         if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push({ sub, date: d });
+        map.get(key)!.push({ sub, date: d, projected });
       }
     }
     return map;
@@ -273,20 +306,22 @@ export default function CalendarView() {
                         {events.slice(0, 3).map((ev) => {
                           const daysUntil = ev.date.diff(today, 'day');
                           return (
-                            <Tooltip key={ev.sub.id}>
+                            <Tooltip key={`${ev.sub.id}-${ev.date.format('MMDD')}`}>
                               <TooltipTrigger
                                 className={cn(
                                   'text-[11px] leading-4 px-1 rounded text-white truncate block text-left',
+                                  ev.projected && 'opacity-60',
                                   daysUntil < 0 && 'bg-destructive',
                                   daysUntil === 0 && 'bg-amber-500',
                                   daysUntil > 0 && daysUntil <= 3 && 'bg-orange-500',
                                   daysUntil > 3 && 'bg-green-500',
                                 )}
                               >
-                                {ev.sub.name}
+                                {ev.projected ? `↻ ${ev.sub.name}` : ev.sub.name}
                               </TooltipTrigger>
                               <TooltipContent>
                                 {ev.sub.name} · {getCurrencySymbol(ev.sub.currency)}{ev.sub.amount.toFixed(2)} · {getCycleLabel(ev.sub.cycle, locale)}
+                                {ev.projected && (locale === 'zh' ? ' · 自动续费' : ' · Auto')}
                               </TooltipContent>
                             </Tooltip>
                           );
@@ -329,9 +364,14 @@ export default function CalendarView() {
                     : `${daysUntil} ${t('calendar.daysUntil')}`;
 
                 return (
-                  <div key={ev.sub.id} className="py-3 border-b border-border/50 last:border-0">
+                  <div key={`${ev.sub.id}-${ev.date.format('MMDD')}`} className="py-3 border-b border-border/50 last:border-0">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="font-semibold text-sm">{ev.sub.name}</span>
+                      {ev.projected && (
+                        <Badge variant="secondary" className="text-xs">
+                          {locale === 'zh' ? '自动续费' : 'Auto'}
+                        </Badge>
+                      )}
                       <Badge
                         variant={daysUntil < 0 ? 'destructive' : 'outline'}
                         className={cn(
@@ -343,7 +383,7 @@ export default function CalendarView() {
                       >
                         {statusText}
                       </Badge>
-                      {ev.sub.cycle !== 'ONE_TIME' && (
+                      {ev.sub.cycle !== 'ONE_TIME' && !ev.projected && (
                         <Button
                           variant="outline"
                           size="sm"

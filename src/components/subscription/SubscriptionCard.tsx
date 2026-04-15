@@ -34,6 +34,7 @@ interface SubscriptionCardProps {
     currency: string;
     cycle: string;
     customCycleDays?: number | null;
+    autoRenew?: boolean;
     startDate: string;
     nextRenewalDate: string;
     isActive: boolean;
@@ -187,6 +188,18 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete, onRen
               {PRESET_PAYMENT_METHODS.includes(subscription.paymentMethod)
                 ? t(`subscription.paymentMethods.${subscription.paymentMethod}`)
                 : subscription.paymentMethod}
+            </Badge>
+          )}
+          {!isOneTime && (
+            <Badge variant="secondary" className={cn(
+              'gap-1 text-xs',
+              subscription.autoRenew
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800/30 dark:text-slate-400'
+            )}>
+              {subscription.autoRenew
+                ? (locale === 'zh' ? '自动订阅' : 'Auto')
+                : (locale === 'zh' ? '手动付款' : 'Manual')}
             </Badge>
           )}
           {!subscription.isActive && (

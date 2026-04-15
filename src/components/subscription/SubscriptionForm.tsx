@@ -56,6 +56,7 @@ const defaultForm = {
   nextRenewalDate: dayjs().add(1, 'month').format('YYYY-MM-DD'),
   category: '',
   paymentMethod: '',
+  autoRenew: false,
   url: '',
   description: '',
   notes: '',
@@ -104,6 +105,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
         nextRenewalDate: initialValues.nextRenewalDate ? dayjs(initialValues.nextRenewalDate as string).format('YYYY-MM-DD') : dayjs().add(1, 'month').format('YYYY-MM-DD'),
         category: (initialValues.category as string) || '',
         paymentMethod: (initialValues.paymentMethod as string) || '',
+        autoRenew: initialValues.autoRenew === true,
         url: (initialValues.url as string) || '',
         description: (initialValues.description as string) || '',
         notes: (initialValues.notes as string) || '',
@@ -142,6 +144,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
         nextRenewalDate: dayjs(form.nextRenewalDate).toISOString(),
         category: form.category || null,
         paymentMethod: form.paymentMethod || null,
+        autoRenew: form.autoRenew,
         url: form.url || null,
         description: form.description || null,
         notes: form.notes || null,
@@ -358,13 +361,24 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
             />
           </div>
 
-          {/* Active */}
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={form.isActive}
-              onCheckedChange={(v) => updateField('isActive', v)}
-            />
-            <Label>{t('subscription.active')}</Label>
+          {/* Active & Auto-Renew */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(v) => updateField('isActive', v)}
+              />
+              <Label>{t('subscription.active')}</Label>
+            </div>
+            {form.cycle !== 'ONE_TIME' && (
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={form.autoRenew}
+                  onCheckedChange={(v) => updateField('autoRenew', v)}
+                />
+                <Label>{locale === 'zh' ? '自动订阅' : 'Auto Renew'}</Label>
+              </div>
+            )}
           </div>
 
           <Separator />

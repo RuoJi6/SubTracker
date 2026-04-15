@@ -9,6 +9,7 @@ export interface SubscriptionFormData {
   currency: string;
   cycle: CycleType;
   customCycleDays?: number;
+  autoRenew: boolean;
   startDate: string;
   nextRenewalDate: string;
   url?: string;

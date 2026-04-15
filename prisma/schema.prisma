@@ -17,6 +17,7 @@ model Subscription {
   cycle                   String               @default("MONTHLY") // WEEKLY, MONTHLY, QUARTERLY, YEARLY, CUSTOM
   customCycleDays         Int?
   paymentMethod           String?              // e.g. Alipay, WeChat, CreditCard, PayPal, or custom
+  autoRenew               Boolean              @default(false) // true = auto subscription, false = manual payment
   startDate               DateTime
   nextRenewalDate         DateTime
   url                     String?
