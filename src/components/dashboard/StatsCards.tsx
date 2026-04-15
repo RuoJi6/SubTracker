@@ -340,8 +340,8 @@ export default function StatsCards() {
               <CardTitle className="text-base">{t('dashboard.expenseChart')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={barData} barCategoryGap="20%">
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={barData} barCategoryGap="20%" margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#818cf8" stopOpacity={1} />
