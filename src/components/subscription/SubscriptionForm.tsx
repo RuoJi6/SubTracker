@@ -116,9 +116,11 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
         description: (initialValues.description as string) || '',
         notes: (initialValues.notes as string) || '',
         isActive: initialValues.isActive !== false,
-        notifyEnabled: true,
-        notifyDaysBefore: [1],
-        notifyTime: '09:00',
+        notifyEnabled: initialValues.notifyEnabled !== undefined ? initialValues.notifyEnabled === true : true,
+        notifyDaysBefore: Array.isArray(initialValues.notifyDaysBefore)
+          ? (initialValues.notifyDaysBefore as number[])
+          : [1],
+        notifyTime: (initialValues.notifyTime as string) || '09:00',
       });
     } else if (open) {
       setForm({ ...defaultForm, startDate: dayjs().format('YYYY-MM-DD'), nextRenewalDate: dayjs().add(1, 'month').format('YYYY-MM-DD') });
