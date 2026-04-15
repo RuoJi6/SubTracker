@@ -75,6 +75,21 @@ pnpm dev
 
 ### Docker 部署
 
+#### 方式一：直接拉取镜像（推荐）
+
+```bash
+docker pull ghcr.io/ruoji6/subtracker:latest
+
+docker run -d -p 3000:3000 \
+  -e AUTH_USERNAME=admin \
+  -e AUTH_PASSWORD=your_password \
+  -e JWT_SECRET=your_secret \
+  -v subtracker-data:/app/prisma/data \
+  ghcr.io/ruoji6/subtracker:latest
+```
+
+#### 方式二：本地构建
+
 ```bash
 # 使用 docker-compose 一键启动
 docker-compose up -d
@@ -88,6 +103,8 @@ docker run -d -p 3000:3000 \
   -v subtracker-data:/app/prisma/data \
   subtracker
 ```
+
+> 💡 每次推送到 `main` 分支或创建版本 tag（如 `v1.0.0`）时，GitHub Actions 会自动构建并推送镜像到 ghcr.io。
 
 ## ⚙️ 环境变量
 
