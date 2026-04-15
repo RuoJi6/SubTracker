@@ -224,16 +224,18 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete, onRen
 
         {!isOneTime && (
           <Tooltip>
-            <TooltipTrigger className="inline-flex items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-blue-500 hover:text-blue-600"
-                disabled={renewing}
-                onClick={handleRenew}
-              >
-                <RotateCw className={cn('size-4', renewing && 'animate-spin')} />
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-blue-500 hover:text-blue-600"
+                  disabled={renewing}
+                  onClick={handleRenew}
+                />
+              }
+            >
+              <RotateCw className={cn('size-4', renewing && 'animate-spin')} />
             </TooltipTrigger>
             <TooltipContent>
               {locale === 'zh' ? '手动续费' : 'Renew'}
