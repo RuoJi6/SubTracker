@@ -11,9 +11,12 @@ interface Subscription {
   amount: number;
   currency: string;
   cycle: string;
+  customCycleDays?: number | null;
+  startDate: string;
   nextRenewalDate: string;
   isActive: boolean;
   category?: string | null;
+  paymentMethod?: string | null;
   url?: string | null;
   description?: string | null;
 }
