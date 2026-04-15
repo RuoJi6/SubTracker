@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { Row, Col, Card, Statistic, Tag, Typography, Spin, Modal, Table } from 'antd';
+import { Row, Col, Card, Statistic, Tag, Typography, Spin, Modal, Table, Descriptions } from 'antd';
 import {
   DollarOutlined,
   AppstoreOutlined,
@@ -23,9 +23,15 @@ interface Subscription {
   amount: number;
   currency: string;
   cycle: string;
+  customCycleDays?: number | null;
   nextRenewalDate: string;
   startDate: string;
   isActive: boolean;
+  category?: string | null;
+  paymentMethod?: string | null;
+  url?: string | null;
+  description?: string | null;
+  notes?: string | null;
   exchangeRateAtPurchase?: number | null;
 }
 
@@ -47,6 +53,8 @@ export default function StatsCards() {
   const [settings, setSettings] = useState<Settings>({ displayCurrency: 'CNY' });
   const [loading, setLoading] = useState(true);
   const [breakdownType, setBreakdownType] = useState<'monthly' | 'yearly' | 'onetime' | null>(null);
+  const [detailSub, setDetailSub] = useState<Subscription | null>(null);
+  const [showActiveList, setShowActiveList] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -176,7 +184,7 @@ export default function StatsCards() {
           </Col>
         )}
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card hoverable onClick={() => setShowActiveList(true)} style={{ cursor: 'pointer' }}>
             <Statistic
               title={t('dashboard.activeCount')}
               value={activeCount}
@@ -244,7 +252,13 @@ export default function StatsCards() {
           {upcoming.map((sub) => {
             const days = dayjs(sub.nextRenewalDate).diff(dayjs(), 'day');
             return (
-              <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}>
+              <div
+                key={sub.id}
+                onClick={() => setDetailSub(sub)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', borderRadius: 4 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f5')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
                 <div>
                   <Text strong>{sub.name}</Text>
                   <br />
@@ -270,7 +284,13 @@ export default function StatsCards() {
           {expired.map((sub) => {
             const days = dayjs().diff(dayjs(sub.nextRenewalDate), 'day');
             return (
-              <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}>
+              <div
+                key={sub.id}
+                onClick={() => setDetailSub(sub)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', borderRadius: 4 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#fff2f0')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
                 <div>
                   <Text strong>{sub.name}</Text>
                   <br />
@@ -398,6 +418,141 @@ export default function StatsCards() {
             ]}
           />
         )}
+      </Modal>
+
+      {/* Subscription Detail Modal */}
+      <Modal
+        open={detailSub !== null}
+        onCancel={() => setDetailSub(null)}
+        footer={null}
+        title={detailSub?.name || ''}
+        width={560}
+      >
+        {detailSub && (
+          <Descriptions column={2} bordered size="small" style={{ marginTop: 8 }}>
+            <Descriptions.Item label={t('subscription.amount')} span={1}>
+              <Text strong style={{ fontSize: 16, color: '#1890ff' }}>
+                {getCurrencySymbol(detailSub.currency)}{detailSub.amount.toFixed(2)}
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label={t('subscription.currency')} span={1}>
+              {detailSub.currency}
+            </Descriptions.Item>
+            <Descriptions.Item label={t('subscription.cycle')} span={1}>
+              <Tag color="blue">{getCycleLabel(detailSub.cycle, locale)}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label={t('subscription.active')} span={1}>
+              <Tag color={detailSub.isActive ? 'green' : 'default'}>
+                {detailSub.isActive ? (locale === 'zh' ? '活跃' : 'Active') : (locale === 'zh' ? '停用' : 'Inactive')}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label={t('subscription.startDate')} span={1}>
+              {dayjs(detailSub.startDate).format('YYYY-MM-DD')}
+            </Descriptions.Item>
+            {detailSub.cycle !== 'ONE_TIME' && (
+              <Descriptions.Item label={t('subscription.nextRenewal')} span={1}>
+                <Text style={{ color: dayjs(detailSub.nextRenewalDate).isBefore(dayjs()) ? '#f5222d' : undefined }}>
+                  {dayjs(detailSub.nextRenewalDate).format('YYYY-MM-DD')}
+                </Text>
+              </Descriptions.Item>
+            )}
+            {detailSub.category && (
+              <Descriptions.Item label={t('subscription.category')} span={1}>
+                <Tag>{t(`subscription.categories.${detailSub.category}`)}</Tag>
+              </Descriptions.Item>
+            )}
+            {detailSub.paymentMethod && (
+              <Descriptions.Item label={t('subscription.paymentMethod')} span={1}>
+                {detailSub.paymentMethod}
+              </Descriptions.Item>
+            )}
+            {detailSub.exchangeRateAtPurchase && detailSub.currency !== displayCurrency && (
+              <Descriptions.Item label={locale === 'zh' ? '折算金额' : 'Converted'} span={1}>
+                <Text strong>
+                  {symbol}{(detailSub.amount * detailSub.exchangeRateAtPurchase).toFixed(2)}
+                </Text>
+              </Descriptions.Item>
+            )}
+            {detailSub.url && (
+              <Descriptions.Item label={t('subscription.url')} span={2}>
+                <a href={detailSub.url} target="_blank" rel="noopener noreferrer">{detailSub.url}</a>
+              </Descriptions.Item>
+            )}
+            {detailSub.description && (
+              <Descriptions.Item label={t('subscription.description')} span={2}>
+                {detailSub.description}
+              </Descriptions.Item>
+            )}
+            {detailSub.notes && (
+              <Descriptions.Item label={t('subscription.notes')} span={2}>
+                {detailSub.notes}
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+        )}
+      </Modal>
+
+      {/* Active Subscriptions List Modal */}
+      <Modal
+        open={showActiveList}
+        onCancel={() => setShowActiveList(false)}
+        footer={null}
+        title={`${t('dashboard.activeCount')} (${activeCount})`}
+        width={700}
+      >
+        <Table
+          dataSource={subscriptions.map(s => ({ ...s, key: s.id }))}
+          pagination={false}
+          size="small"
+          onRow={(record) => ({
+            onClick: () => { setShowActiveList(false); setDetailSub(record as Subscription); },
+            style: { cursor: 'pointer' },
+          })}
+          columns={[
+            {
+              title: t('subscription.name'),
+              dataIndex: 'name',
+              key: 'name',
+              render: (name: string) => <Text strong>{name}</Text>,
+            },
+            {
+              title: t('subscription.amount'),
+              key: 'amount',
+              render: (_: unknown, record: Subscription) => (
+                <Text>{getCurrencySymbol(record.currency)}{record.amount.toFixed(2)}</Text>
+              ),
+            },
+            {
+              title: t('subscription.cycle'),
+              dataIndex: 'cycle',
+              key: 'cycle',
+              render: (cycle: string) => <Tag>{getCycleLabel(cycle, locale)}</Tag>,
+            },
+            {
+              title: t('subscription.nextRenewal'),
+              key: 'nextRenewal',
+              render: (_: unknown, record: Subscription) => {
+                if (record.cycle === 'ONE_TIME') return <Tag color="purple">{locale === 'zh' ? '买断' : 'One-time'}</Tag>;
+                const days = dayjs(record.nextRenewalDate).diff(dayjs(), 'day');
+                return (
+                  <span>
+                    {dayjs(record.nextRenewalDate).format('MM-DD')}
+                    {' '}
+                    <Tag color={days <= 0 ? 'red' : days <= 3 ? 'orange' : days <= 7 ? 'blue' : 'green'} style={{ marginLeft: 4 }}>
+                      {days <= 0 ? (locale === 'zh' ? '已过期' : 'Overdue') : `${days}d`}
+                    </Tag>
+                  </span>
+                );
+              },
+            },
+            {
+              title: locale === 'zh' ? '分类' : 'Category',
+              key: 'category',
+              render: (_: unknown, record: Subscription) =>
+                record.category ? <Tag color="blue">{t(`subscription.categories.${record.category}`)}</Tag> : '-',
+            },
+          ]}
+        />
       </Modal>
     </div>
   );
