@@ -103,6 +103,7 @@ export async function PUT(
         url: body.url,
         category: body.category,
         paymentMethod: body.paymentMethod,
+        autoRenew: body.autoRenew,
         isActive: body.isActive,
         exchangeRateAtPurchase: newExchangeRate,
         notes: body.notes,

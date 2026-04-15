@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         url: body.url || null,
         category: body.category || null,
         paymentMethod: body.paymentMethod || null,
+        autoRenew: body.autoRenew ?? false,
         isActive: body.isActive ?? true,
         exchangeRateAtPurchase: exchangeRateAtPurchase ?? null,
         notes: body.notes || null,
