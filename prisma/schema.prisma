@@ -68,3 +68,10 @@ model ExchangeRateCache {
 
   @@unique([baseCurrency, targetCurrency, date])
 }
+
+model PaymentMethod {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  icon      String?
+  createdAt DateTime @default(now())
+}

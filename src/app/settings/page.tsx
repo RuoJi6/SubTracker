@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Card, Form, Input, InputNumber, Select, Button, Typography, Divider, Space, Alert, Popconfirm, App } from 'antd';
-import { CopyOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, Form, Input, InputNumber, Select, Button, Typography, Divider, Space, Alert, Popconfirm, App, Tag, Empty } from 'antd';
+import { CopyOutlined, ReloadOutlined, PlusOutlined, WalletOutlined } from '@ant-design/icons';
 import { useI18n } from '@/hooks/useI18n';
 import { currencies } from '@/lib/currency';
 
@@ -14,6 +14,9 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [calendarToken, setCalendarToken] = useState('');
   const [regenerating, setRegenerating] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<Array<{ id: string; name: string }>>([]);
+  const [newMethodName, setNewMethodName] = useState('');
+  const [addingMethod, setAddingMethod] = useState(false);
   const { message } = App.useApp();
 
   const calendarUrl = typeof window !== 'undefined' && calendarToken
@@ -30,6 +33,11 @@ export default function SettingsPage() {
             setCalendarToken(data.data.calendarToken);
           }
         }
+      });
+    fetch('/api/payment-methods')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setPaymentMethods(data.data);
       });
   }, [form]);
 
@@ -80,6 +88,48 @@ export default function SettingsPage() {
   const copyCalendarUrl = () => {
     navigator.clipboard.writeText(calendarUrl);
     message.success('URL copied!');
+  };
+
+  const addPaymentMethod = async () => {
+    const name = newMethodName.trim();
+    if (!name) return;
+    setAddingMethod(true);
+    try {
+      const res = await fetch('/api/payment-methods', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPaymentMethods((prev) => [...prev, data.data]);
+        setNewMethodName('');
+        message.success(t('settings.paymentMethodAdded'));
+      } else if (res.status === 409) {
+        message.error(t('settings.paymentMethodExists'));
+      } else {
+        message.error(data.error || t('common.error'));
+      }
+    } catch {
+      message.error(t('common.error'));
+    } finally {
+      setAddingMethod(false);
+    }
+  };
+
+  const deletePaymentMethod = async (id: string) => {
+    try {
+      const res = await fetch(`/api/payment-methods?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setPaymentMethods((prev) => prev.filter((m) => m.id !== id));
+        message.success(t('settings.paymentMethodDeleted'));
+      } else {
+        message.error(data.error || t('common.error'));
+      }
+    } catch {
+      message.error(t('common.error'));
+    }
   };
 
   return (
@@ -196,6 +246,52 @@ export default function SettingsPage() {
               </Button>
             </Popconfirm>
           </Space>
+        </Card>
+
+        <Card style={{ marginBottom: 16 }}>
+          <Title level={5}><WalletOutlined /> {t('settings.paymentMethods')}</Title>
+          <div style={{ marginBottom: 12 }}>
+            <Space.Compact style={{ width: '100%', maxWidth: 400 }}>
+              <Input
+                placeholder={t('settings.paymentMethodName')}
+                value={newMethodName}
+                onChange={(e) => setNewMethodName(e.target.value)}
+                onPressEnter={addPaymentMethod}
+              />
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={addPaymentMethod}
+                loading={addingMethod}
+              >
+                {t('settings.addPaymentMethod')}
+              </Button>
+            </Space.Compact>
+          </div>
+          {paymentMethods.length === 0 ? (
+            <Empty description={t('settings.noCustomPaymentMethods')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {paymentMethods.map((m) => (
+                <Popconfirm
+                  key={m.id}
+                  title={t('settings.deletePaymentMethodConfirm')}
+                  onConfirm={() => deletePaymentMethod(m.id)}
+                  okText={t('common.confirm')}
+                  cancelText={t('common.cancel')}
+                >
+                  <Tag
+                    closable
+                    onClose={(e) => e.preventDefault()}
+                    color="purple"
+                    style={{ cursor: 'pointer', fontSize: 14, padding: '4px 8px' }}
+                  >
+                    <WalletOutlined /> {m.name}
+                  </Tag>
+                </Popconfirm>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Divider />
