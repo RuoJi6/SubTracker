@@ -1,0 +1,208 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { Card, Form, Input, InputNumber, Select, Button, Typography, Divider, Space, Alert, Popconfirm, App } from 'antd';
+import { CopyOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useI18n } from '@/hooks/useI18n';
+import { currencies } from '@/lib/currency';
+
+const { Title, Text } = Typography;
+
+export default function SettingsPage() {
+  const { t } = useI18n();
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [calendarToken, setCalendarToken] = useState('');
+  const [regenerating, setRegenerating] = useState(false);
+  const { message } = App.useApp();
+
+  const calendarUrl = typeof window !== 'undefined' && calendarToken
+    ? `${window.location.origin}/api/calendar?token=${calendarToken}`
+    : '';
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          form.setFieldsValue(data.data);
+          if (data.data.calendarToken) {
+            setCalendarToken(data.data.calendarToken);
+          }
+        }
+      });
+  }, [form]);
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+      setLoading(true);
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      const data = await res.json();
+      if (data.success) {
+        message.success(t('settings.saved'));
+      } else {
+        message.error(data.error || t('common.error'));
+      }
+    } catch {
+      // validation error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const regenerateToken = async () => {
+    setRegenerating(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regenerateCalendarToken: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCalendarToken(data.data.calendarToken);
+        message.success(t('settings.tokenRegenerated'));
+      } else {
+        message.error(data.error || t('common.error'));
+      }
+    } catch {
+      message.error(t('common.error'));
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const copyCalendarUrl = () => {
+    navigator.clipboard.writeText(calendarUrl);
+    message.success('URL copied!');
+  };
+
+  return (
+    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+      <Title level={3}>{t('settings.title')}</Title>
+
+      <Form form={form} layout="vertical">
+        <Card style={{ marginBottom: 16 }}>
+          <Title level={5}>{t('settings.title')}</Title>
+          <Space style={{ display: 'flex', flexWrap: 'wrap' }} size="large">
+            <Form.Item name="displayCurrency" label={t('settings.displayCurrency')} style={{ minWidth: 200 }}>
+              <Select
+                showSearch
+                optionFilterProp="label"
+                options={currencies.map((c) => ({
+                  value: c.code,
+                  label: `${c.symbol} ${c.code} - ${c.nameZh}`,
+                }))}
+              />
+            </Form.Item>
+            <Form.Item name="language" label={t('settings.language')} style={{ minWidth: 200 }}>
+              <Select
+                options={[
+                  { value: 'zh', label: '中文' },
+                  { value: 'en', label: 'English' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item name="timezone" label={t('settings.timezone')} style={{ minWidth: 200 }}>
+              <Select
+                showSearch
+                options={[
+                  { value: 'Asia/Shanghai', label: 'Asia/Shanghai (UTC+8)' },
+                  { value: 'Asia/Tokyo', label: 'Asia/Tokyo (UTC+9)' },
+                  { value: 'America/New_York', label: 'America/New_York (UTC-5)' },
+                  { value: 'America/Los_Angeles', label: 'America/Los_Angeles (UTC-8)' },
+                  { value: 'Europe/London', label: 'Europe/London (UTC+0)' },
+                  { value: 'Europe/Berlin', label: 'Europe/Berlin (UTC+1)' },
+                ]}
+              />
+            </Form.Item>
+          </Space>
+        </Card>
+
+        <Card style={{ marginBottom: 16 }}>
+          <Title level={5}>{t('settings.dingtalkConfig')}</Title>
+          <Form.Item name="dingtalkWebhook" label={t('notification.webhook')}>
+            <Input placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." />
+          </Form.Item>
+          <Form.Item name="dingtalkSecret" label={t('notification.secret')}>
+            <Input.Password placeholder="SEC..." />
+          </Form.Item>
+        </Card>
+
+        <Card style={{ marginBottom: 16 }}>
+          <Title level={5}>{t('settings.emailConfig')}</Title>
+          <Space style={{ display: 'flex', flexWrap: 'wrap' }} size="large">
+            <Form.Item name="smtpHost" label={t('settings.smtpHost')} style={{ minWidth: 200 }}>
+              <Input placeholder="smtp.gmail.com" />
+            </Form.Item>
+            <Form.Item name="smtpPort" label={t('settings.smtpPort')} style={{ minWidth: 120 }}>
+              <InputNumber placeholder="465" style={{ width: '100%' }} />
+            </Form.Item>
+          </Space>
+          <Space style={{ display: 'flex', flexWrap: 'wrap' }} size="large">
+            <Form.Item name="smtpUser" label={t('settings.smtpUser')} style={{ minWidth: 200 }}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="smtpPass" label={t('settings.smtpPass')} style={{ minWidth: 200 }}>
+              <Input.Password />
+            </Form.Item>
+          </Space>
+          <Space style={{ display: 'flex', flexWrap: 'wrap' }} size="large">
+            <Form.Item name="emailFrom" label={t('settings.emailFrom')} style={{ minWidth: 200 }}>
+              <Input placeholder="noreply@example.com" />
+            </Form.Item>
+            <Form.Item name="emailTo" label={t('settings.emailTo')} style={{ minWidth: 200 }}>
+              <Input placeholder="you@example.com" />
+            </Form.Item>
+          </Space>
+        </Card>
+
+        <Card style={{ marginBottom: 16 }}>
+          <Title level={5}>{t('notification.calendar')}</Title>
+          <Alert
+            type="info"
+            title={t('notification.calendarHelp')}
+            style={{ marginBottom: 12 }}
+          />
+          <div style={{ marginBottom: 12 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>{t('settings.calendarTokenTip')}</Text>
+          </div>
+          <Space orientation="vertical" style={{ width: '100%' }}>
+            <Space.Compact style={{ width: '100%' }}>
+              <Input
+                value={calendarUrl}
+                readOnly
+              />
+              <Button icon={<CopyOutlined />} onClick={copyCalendarUrl} />
+            </Space.Compact>
+            <Popconfirm
+              title={t('settings.regenerateConfirm')}
+              onConfirm={regenerateToken}
+              okText={t('common.confirm')}
+              cancelText={t('common.cancel')}
+            >
+              <Button
+                icon={<ReloadOutlined />}
+                loading={regenerating}
+                danger
+                size="small"
+              >
+                {t('settings.regenerateToken')}
+              </Button>
+            </Popconfirm>
+          </Space>
+        </Card>
+
+        <Divider />
+        <Button type="primary" onClick={handleSave} loading={loading} size="large">
+          {t('common.save')}
+        </Button>
+      </Form>
+    </div>
+  );
+}

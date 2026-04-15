@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Subscription {
+  id                      String               @id @default(cuid())
+  name                    String
+  icon                    String?
+  description             String?
+  amount                  Float
+  currency                String               @default("USD")
+  cycle                   String               @default("MONTHLY") // WEEKLY, MONTHLY, QUARTERLY, YEARLY, CUSTOM
+  customCycleDays         Int?
+  startDate               DateTime
+  nextRenewalDate         DateTime
+  url                     String?
+  category                String?
+  isActive                Boolean              @default(true)
+  exchangeRateAtPurchase  Float?
+  notes                   String?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  notificationConfigs     NotificationConfig[]
+}
+
+model NotificationConfig {
+  id              String       @id @default(cuid())
+  subscriptionId  String
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  type            String       @default("EMAIL") // DINGTALK, EMAIL, CALENDAR
+  enabled         Boolean      @default(true)
+  daysBefore      String       @default("[1]") // JSON array e.g. "[0,1,2]"
+  notifyTime      String       @default("09:00")
+  createdAt       DateTime     @default(now())
+
+  @@unique([subscriptionId, type])
+}
+
+model GlobalSettings {
+  id               String  @id @default("global")
+  displayCurrency  String  @default("CNY")
+  language         String  @default("zh")
+  calendarToken    String?
+  dingtalkWebhook  String?
+  dingtalkSecret   String?
+  smtpHost         String?
+  smtpPort         Int?
+  smtpUser         String?
+  smtpPass         String?
+  emailFrom        String?
+  emailTo          String?
+  timezone         String  @default("Asia/Shanghai")
+}
+
+model ExchangeRateCache {
+  id             String   @id @default(cuid())
+  baseCurrency   String
+  targetCurrency String
+  rate           Float
+  date           String
+  updatedAt      DateTime @updatedAt
+
+  @@unique([baseCurrency, targetCurrency, date])
+}

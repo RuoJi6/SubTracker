@@ -1,0 +1,54 @@
+import { CurrencyOption } from '@/types';
+
+export const currencies: CurrencyOption[] = [
+  { code: 'CNY', name: 'Chinese Yuan', nameZh: '人民币', symbol: '¥' },
+  { code: 'USD', name: 'US Dollar', nameZh: '美元', symbol: '$' },
+  { code: 'EUR', name: 'Euro', nameZh: '欧元', symbol: '€' },
+  { code: 'GBP', name: 'British Pound', nameZh: '英镑', symbol: '£' },
+  { code: 'JPY', name: 'Japanese Yen', nameZh: '日元', symbol: '¥' },
+  { code: 'KRW', name: 'South Korean Won', nameZh: '韩元', symbol: '₩' },
+  { code: 'HKD', name: 'Hong Kong Dollar', nameZh: '港币', symbol: 'HK$' },
+  { code: 'TWD', name: 'Taiwan Dollar', nameZh: '新台币', symbol: 'NT$' },
+  { code: 'SGD', name: 'Singapore Dollar', nameZh: '新加坡元', symbol: 'S$' },
+  { code: 'AUD', name: 'Australian Dollar', nameZh: '澳元', symbol: 'A$' },
+  { code: 'CAD', name: 'Canadian Dollar', nameZh: '加元', symbol: 'C$' },
+  { code: 'CHF', name: 'Swiss Franc', nameZh: '瑞士法郎', symbol: 'CHF' },
+  { code: 'INR', name: 'Indian Rupee', nameZh: '印度卢比', symbol: '₹' },
+  { code: 'RUB', name: 'Russian Ruble', nameZh: '俄罗斯卢布', symbol: '₽' },
+  { code: 'BRL', name: 'Brazilian Real', nameZh: '巴西雷亚尔', symbol: 'R$' },
+  { code: 'MXN', name: 'Mexican Peso', nameZh: '墨西哥比索', symbol: 'Mex$' },
+  { code: 'THB', name: 'Thai Baht', nameZh: '泰铢', symbol: '฿' },
+  { code: 'TRY', name: 'Turkish Lira', nameZh: '土耳其里拉', symbol: '₺' },
+];
+
+export function getCurrencySymbol(code: string): string {
+  return currencies.find((c) => c.code === code)?.symbol || code;
+}
+
+export function formatAmount(amount: number, currency: string): string {
+  const symbol = getCurrencySymbol(currency);
+  const formatted = amount.toFixed(2);
+  return `${symbol}${formatted}`;
+}
+
+export function getCycleLabel(cycle: string, lang: string = 'zh'): string {
+  const labels: Record<string, Record<string, string>> = {
+    WEEKLY: { zh: '每周', en: 'Weekly' },
+    MONTHLY: { zh: '每月', en: 'Monthly' },
+    QUARTERLY: { zh: '每季度', en: 'Quarterly' },
+    YEARLY: { zh: '每年', en: 'Yearly' },
+    CUSTOM: { zh: '自定义', en: 'Custom' },
+  };
+  return labels[cycle]?.[lang] || cycle;
+}
+
+export function getCycleDays(cycle: string, customDays?: number): number {
+  switch (cycle) {
+    case 'WEEKLY': return 7;
+    case 'MONTHLY': return 30;
+    case 'QUARTERLY': return 90;
+    case 'YEARLY': return 365;
+    case 'CUSTOM': return customDays || 30;
+    default: return 30;
+  }
+}

@@ -1,0 +1,21 @@
+services:
+  subtracker:
+    build: .
+    container_name: subtracker
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - subtracker-data:/app/data
+    environment:
+      - DATABASE_URL=file:./data/subtracker.db
+      - AUTH_USERNAME=admin
+      - AUTH_PASSWORD=admin123
+      - JWT_SECRET=change-me-in-production
+      - DEPLOY_MODE=docker
+      - NEXT_PUBLIC_DEFAULT_CURRENCY=CNY
+      - NEXT_PUBLIC_DEFAULT_LANGUAGE=zh
+      - TZ=Asia/Shanghai
+
+volumes:
+  subtracker-data:
