@@ -15,7 +15,7 @@ interface SubscriptionFormProps {
   initialValues?: Record<string, unknown> | null;
 }
 
-const cycleOptions = ['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM'];
+const cycleOptions = ['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'ONE_TIME', 'CUSTOM'];
 const categoryOptions = ['development', 'design', 'productivity', 'entertainment', 'cloud', 'communication', 'education', 'other'];
 const paymentMethodOptions = ['alipay', 'wechat', 'credit_card', 'debit_card', 'paypal', 'apple_pay', 'google_pay', 'bank_transfer', 'crypto'];
 
@@ -25,6 +25,7 @@ function calcNextRenewal(startDate: Dayjs, cycle: string, customDays?: number): 
     case 'MONTHLY': return startDate.add(1, 'month');
     case 'QUARTERLY': return startDate.add(3, 'month');
     case 'YEARLY': return startDate.add(1, 'year');
+    case 'ONE_TIME': return startDate; // No renewal for one-time
     case 'CUSTOM': return startDate.add(customDays || 30, 'day');
     default: return startDate.add(1, 'month');
   }
@@ -192,9 +193,11 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
           <Form.Item name="startDate" label={t('subscription.startDate')} rules={[{ required: true }]} style={{ width: 200 }}>
             <DatePicker style={{ width: '100%' }} onChange={handleStartDateChange} />
           </Form.Item>
-          <Form.Item name="nextRenewalDate" label={t('subscription.nextRenewal')} rules={[{ required: true }]} style={{ width: 200 }}>
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
+          {cycle !== 'ONE_TIME' && (
+            <Form.Item name="nextRenewalDate" label={t('subscription.nextRenewal')} rules={[{ required: cycle !== 'ONE_TIME' }]} style={{ width: 200 }}>
+              <DatePicker style={{ width: '100%' }} />
+            </Form.Item>
+          )}
         </Space>
 
         <Form.Item name="category" label={t('subscription.category')}>

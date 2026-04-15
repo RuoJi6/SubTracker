@@ -34,10 +34,13 @@
   "dashboard": {
     "totalMonthly": "Monthly Total",
     "totalYearly": "Yearly Total",
+    "totalOneTime": "One-time Total",
     "activeCount": "Active Subscriptions",
     "upcomingRenewals": "Upcoming Renewals",
+    "expiredSubscriptions": "Expired Subscriptions",
     "noSubscriptions": "No subscriptions yet",
-    "addFirst": "Add your first subscription"
+    "addFirst": "Add your first subscription",
+    "expenseChart": "Monthly Expense Trend"
   },
   "subscription": {
     "name": "Name",
@@ -73,6 +76,7 @@
       "MONTHLY": "Monthly",
       "QUARTERLY": "Quarterly",
       "YEARLY": "Yearly",
+      "ONE_TIME": "One-time",
       "CUSTOM": "Custom"
     },
     "categories": {

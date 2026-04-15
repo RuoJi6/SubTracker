@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, Tag, Typography, Space, Button, Popconfirm, Progress, Tooltip } from 'antd';
-import { EditOutlined, DeleteOutlined, LinkOutlined, ClockCircleOutlined, WalletOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, LinkOutlined, ClockCircleOutlined, WalletOutlined, ShoppingOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useI18n } from '@/hooks/useI18n';
 import { getCurrencySymbol, getCycleLabel } from '@/lib/currency';
@@ -54,7 +54,8 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete }: Sub
 
   const progressColor = daysUntil <= 0 ? '#ff4d4f' : daysUntil <= 3 ? '#faad14' : daysUntil <= 7 ? '#1890ff' : '#52c41a';
 
-  const urgencyColor = daysUntil <= 0 ? '#ff4d4f' : daysUntil <= 3 ? '#faad14' : daysUntil <= 7 ? '#1890ff' : '#52c41a';
+  const urgencyColor = subscription.cycle === 'ONE_TIME' ? '#722ed1' : daysUntil <= 0 ? '#ff4d4f' : daysUntil <= 3 ? '#faad14' : daysUntil <= 7 ? '#1890ff' : '#52c41a';
+  const isOneTime = subscription.cycle === 'ONE_TIME';
 
   return (
     <Card
@@ -100,14 +101,24 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete }: Sub
       </div>
 
       <Space style={{ marginTop: 12 }} wrap>
-        <Tag icon={<ClockCircleOutlined />} color={urgencyColor}>
-          {daysUntil <= 0
-            ? (locale === 'zh' ? '已到期' : 'Expired')
-            : daysUntil === 1
-              ? (locale === 'zh' ? '明天续费' : 'Tomorrow')
-              : (locale === 'zh' ? `${daysUntil}天后续费` : `${daysUntil} days left`)}
-        </Tag>
-        <Tag>{dayjs(subscription.nextRenewalDate).format('YYYY-MM-DD')}</Tag>
+        {isOneTime ? (
+          <Tag icon={<ShoppingOutlined />} color="purple">
+            {locale === 'zh' ? '买断' : 'One-time'}
+          </Tag>
+        ) : (
+          <Tag icon={<ClockCircleOutlined />} color={urgencyColor}>
+            {daysUntil <= 0
+              ? (locale === 'zh' ? '已到期' : 'Expired')
+              : daysUntil === 1
+                ? (locale === 'zh' ? '明天续费' : 'Tomorrow')
+                : (locale === 'zh' ? `${daysUntil}天后续费` : `${daysUntil} days left`)}
+          </Tag>
+        )}
+        {isOneTime ? (
+          <Tag>{locale === 'zh' ? '购买于' : 'Purchased'} {dayjs(subscription.startDate).format('YYYY-MM-DD')}</Tag>
+        ) : (
+          <Tag>{dayjs(subscription.nextRenewalDate).format('YYYY-MM-DD')}</Tag>
+        )}
         {subscription.category && (
           <Tag color="blue">{t(`subscription.categories.${subscription.category}`)}</Tag>
         )}
@@ -121,15 +132,17 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete }: Sub
         {!subscription.isActive && <Tag color="default">{t('common.inactive')}</Tag>}
       </Space>
 
-      <Tooltip title={locale === 'zh' ? `已过 ${elapsed}/${cycleDays} 天` : `${elapsed}/${cycleDays} days elapsed`}>
-        <Progress
-          percent={progressPercent}
-          size="small"
-          strokeColor={progressColor}
-          style={{ marginTop: 12, marginBottom: -8 }}
-          format={() => `${elapsed}/${cycleDays}d`}
-        />
-      </Tooltip>
+      {!isOneTime && (
+        <Tooltip title={locale === 'zh' ? `已过 ${elapsed}/${cycleDays} 天` : `${elapsed}/${cycleDays} days elapsed`}>
+          <Progress
+            percent={progressPercent}
+            size="small"
+            strokeColor={progressColor}
+            style={{ marginTop: 12, marginBottom: -8 }}
+            format={() => `${elapsed}/${cycleDays}d`}
+          />
+        </Tooltip>
+      )}
     </Card>
   );
 }

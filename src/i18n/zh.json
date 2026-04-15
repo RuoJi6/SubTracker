@@ -34,10 +34,13 @@
   "dashboard": {
     "totalMonthly": "每月总花费",
     "totalYearly": "每年总花费",
+    "totalOneTime": "买断总花费",
     "activeCount": "活跃订阅",
     "upcomingRenewals": "即将续费",
+    "expiredSubscriptions": "已过期订阅",
     "noSubscriptions": "暂无订阅",
-    "addFirst": "添加你的第一个订阅"
+    "addFirst": "添加你的第一个订阅",
+    "expenseChart": "月度消费趋势"
   },
   "subscription": {
     "name": "软件名称",
@@ -73,6 +76,7 @@
       "MONTHLY": "每月",
       "QUARTERLY": "每季度",
       "YEARLY": "每年",
+      "ONE_TIME": "买断",
       "CUSTOM": "自定义"
     },
     "categories": {

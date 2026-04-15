@@ -40,6 +40,21 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
     const summary = renderTemplate(titleTemplate, templateData);
     const description = renderTemplate(descTemplate, templateData);
 
+    // ONE_TIME: single event, no repeating
+    if (sub.cycle === 'ONE_TIME') {
+      calendar.createEvent({
+        id: `${sub.id}-onetime`,
+        start: new Date(sub.startDate),
+        allDay: true,
+        summary,
+        description,
+        alarms: [
+          { type: ICalAlarmType.display, trigger: 0 },
+        ],
+      });
+      continue;
+    }
+
     const repeating = cycleDays <= 7
       ? { freq: ICalEventRepeatingFreq.WEEKLY, interval: cycleDays / 7 }
       : cycleDays <= 31

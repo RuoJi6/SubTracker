@@ -20,6 +20,7 @@ export async function advanceExpiredRenewals(): Promise<{
       where: {
         isActive: true,
         nextRenewalDate: { lte: now },
+        NOT: { cycle: 'ONE_TIME' },
       },
     });
 
