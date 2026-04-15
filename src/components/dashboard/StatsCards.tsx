@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, LabelList,
 } from 'recharts';
 import dayjs from 'dayjs';
 import {
@@ -167,13 +167,54 @@ export default function StatsCards() {
   , [breakdownData]);
 
   const barData = useMemo(() => {
-    const months: { month: string; amount: number }[] = [];
     const now = dayjs();
-    for (let i = 0; i < 6; i++) {
-      months.push({ month: now.add(i, 'month').format('YYYY-MM'), amount: monthlyTotal });
+    const months: { month: string; amount: number }[] = [];
+    for (let i = -2; i < 4; i++) {
+      const monthStart = now.add(i, 'month').startOf('month');
+      const monthEnd = monthStart.endOf('month');
+      let total = 0;
+      for (const sub of recurring) {
+        let converted = sub.amount;
+        if (sub.currency !== displayCurrency && sub.exchangeRateAtPurchase) {
+          converted *= sub.exchangeRateAtPurchase;
+        }
+        const renewalDate = dayjs(sub.nextRenewalDate);
+        switch (sub.cycle) {
+          case 'WEEKLY':
+            total += converted * 4.33;
+            break;
+          case 'MONTHLY':
+            total += converted;
+            break;
+          case 'QUARTERLY':
+            // Check if this quarter includes the month
+            for (let q = -4; q <= 4; q++) {
+              const d = renewalDate.add(q * 3, 'month');
+              if (d.isSame(monthStart, 'month')) { total += converted; break; }
+            }
+            break;
+          case 'YEARLY':
+            for (let y = -2; y <= 2; y++) {
+              const d = renewalDate.add(y, 'year');
+              if (d.isSame(monthStart, 'month')) { total += converted; break; }
+            }
+            break;
+          case 'CUSTOM': {
+            const cycleDays = sub.customCycleDays || 30;
+            total += converted * (30 / cycleDays);
+            break;
+          }
+          default:
+            total += converted;
+        }
+      }
+      months.push({
+        month: monthStart.format(locale === 'zh' ? 'M月' : 'MMM'),
+        amount: Math.round(total * 100) / 100,
+      });
     }
     return months;
-  }, [monthlyTotal]);
+  }, [recurring, displayCurrency, locale]);
 
   if (loading) {
     return (
@@ -299,16 +340,35 @@ export default function StatsCards() {
               <CardTitle className="text-base">{t('dashboard.expenseChart')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={barData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} className="text-muted-foreground" />
-                  <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={barData} barCategoryGap="20%">
+                  <defs>
+                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#818cf8" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="barGradientActive" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#a78bfa" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.9} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} width={50} />
                   <RechartsTooltip
+                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3, radius: 6 }}
                     formatter={(value) => [`${symbol}${Number(value).toFixed(2)}`, locale === 'zh' ? '预估花费' : 'Estimated']}
-                    contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
+                    contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                   />
-                  <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="amount" fill="url(#barGradient)" activeBar={{ fill: 'url(#barGradientActive)' }} radius={[8, 8, 0, 0]} animationDuration={800}>
+                    <LabelList
+                      dataKey="amount"
+                      position="top"
+                      formatter={(v) => v != null ? `${symbol}${Number(v).toFixed(0)}` : ''}
+                      style={{ fontSize: 11, fontWeight: 600, fill: 'hsl(var(--foreground))' }}
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
