@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
+import { fetchExchangeRate } from '@/lib/exchange-rate';
+import dayjs from 'dayjs';
 
 export async function GET(
   _request: NextRequest,
@@ -60,6 +62,30 @@ export async function PUT(
       }
     }
 
+    // Re-fetch exchange rate if currency or startDate changed
+    const existing = await prisma.subscription.findUnique({ where: { id } });
+    let newExchangeRate = body.exchangeRateAtPurchase;
+    if (existing && (body.currency || body.startDate)) {
+      const currency = body.currency || existing.currency;
+      const startDate = body.startDate || existing.startDate;
+      const displayCurrency = (
+        await prisma.globalSettings.findUnique({ where: { id: 'global' } })
+      )?.displayCurrency || 'CNY';
+
+      if (currency !== displayCurrency &&
+          (body.currency !== existing.currency || body.startDate !== existing.startDate.toISOString())) {
+        try {
+          newExchangeRate = await fetchExchangeRate(
+            currency,
+            displayCurrency,
+            dayjs(startDate).format('YYYY-MM-DD')
+          );
+        } catch {
+          // Keep existing rate on failure
+        }
+      }
+    }
+
     const subscription = await prisma.subscription.update({
       where: { id },
       data: {
@@ -76,7 +102,7 @@ export async function PUT(
         category: body.category,
         paymentMethod: body.paymentMethod,
         isActive: body.isActive,
-        exchangeRateAtPurchase: body.exchangeRateAtPurchase,
+        exchangeRateAtPurchase: newExchangeRate,
         notes: body.notes,
       },
       include: { notificationConfigs: true },
