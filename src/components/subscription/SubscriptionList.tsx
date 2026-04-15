@@ -26,9 +26,10 @@ interface SubscriptionListProps {
   loading: boolean;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onRenew?: () => void;
 }
 
-export default function SubscriptionList({ subscriptions, loading, onEdit, onDelete }: SubscriptionListProps) {
+export default function SubscriptionList({ subscriptions, loading, onEdit, onDelete, onRenew }: SubscriptionListProps) {
   const { t } = useI18n();
 
   if (loading) {
@@ -51,7 +52,7 @@ export default function SubscriptionList({ subscriptions, loading, onEdit, onDel
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {subscriptions.map((sub) => (
-        <SubscriptionCard key={sub.id} subscription={sub} onEdit={onEdit} onDelete={onDelete} />
+        <SubscriptionCard key={sub.id} subscription={sub} onEdit={onEdit} onDelete={onDelete} onRenew={onRenew} />
       ))}
     </div>
   );

@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import dayjs from 'dayjs';
-import { Pencil, Trash2, ExternalLink, Clock, Wallet, ShoppingBag } from 'lucide-react';
+import { Pencil, Trash2, ExternalLink, Clock, Wallet, ShoppingBag, RotateCw } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { getCurrencySymbol, getCycleLabel } from '@/lib/currency';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ interface SubscriptionCardProps {
   };
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onRenew?: () => void;
 }
 
 const urgencyClasses = {
@@ -68,9 +70,10 @@ const progressColorMap: Record<string, string> = {
   green: 'bg-green-500',
 };
 
-export default function SubscriptionCard({ subscription, onEdit, onDelete }: SubscriptionCardProps) {
+export default function SubscriptionCard({ subscription, onEdit, onDelete, onRenew }: SubscriptionCardProps) {
   const { t, locale } = useI18n();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [renewing, setRenewing] = useState(false);
   const now = dayjs();
   const nextRenewal = dayjs(subscription.nextRenewalDate);
   const daysUntil = nextRenewal.diff(now, 'day');
@@ -92,6 +95,24 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete }: Sub
   const isOneTime = subscription.cycle === 'ONE_TIME';
   const urgencyKey = getUrgencyKey(subscription.cycle, daysUntil);
   const progressKey = daysUntil <= 0 ? 'red' : daysUntil <= 3 ? 'orange' : daysUntil <= 7 ? 'blue' : 'green';
+
+  const handleRenew = async () => {
+    setRenewing(true);
+    try {
+      const res = await fetch(`/api/subscriptions/${subscription.id}/renew`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(locale === 'zh' ? '续费成功' : 'Renewed successfully');
+        onRenew?.();
+      } else {
+        toast.error(data.error || 'Error');
+      }
+    } catch {
+      toast.error(locale === 'zh' ? '续费失败' : 'Renew failed');
+    } finally {
+      setRenewing(false);
+    }
+  };
 
   return (
     <Card
@@ -200,6 +221,25 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete }: Sub
         <Button variant="ghost" size="icon-sm" onClick={() => onEdit(subscription.id)}>
           <Pencil className="size-4" />
         </Button>
+
+        {!isOneTime && (
+          <Tooltip>
+            <TooltipTrigger className="inline-flex items-center justify-center">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-blue-500 hover:text-blue-600"
+                disabled={renewing}
+                onClick={handleRenew}
+              >
+                <RotateCw className={cn('size-4', renewing && 'animate-spin')} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {locale === 'zh' ? '手动续费' : 'Renew'}
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogTrigger render={

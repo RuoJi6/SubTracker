@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
-import { ChevronLeft, ChevronRight, Calendar, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Loader2, RotateCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { useI18n } from '@/hooks/useI18n';
-import { getCurrencySymbol, getCycleDays, getCycleLabel } from '@/lib/currency';
+import { getCurrencySymbol, getCycleLabel } from '@/lib/currency';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,46 +31,21 @@ interface RenewalEvent {
   date: Dayjs;
 }
 
+// Only show the exact nextRenewalDate — no automatic projection.
+// Users must manually renew to advance the date.
 function getRenewalDatesInRange(
   sub: Subscription,
   rangeStart: Dayjs,
   rangeEnd: Dayjs
 ): Dayjs[] {
-  const cycleDays = getCycleDays(sub.cycle, sub.customCycleDays ?? undefined);
   const next = dayjs(sub.nextRenewalDate).startOf('day');
-  const dates: Dayjs[] = [];
-
-  // ONE_TIME: only show on the exact date, no projection
-  if (cycleDays <= 0) {
-    if (
-      (next.isAfter(rangeStart) || next.isSame(rangeStart, 'day')) &&
-      (next.isBefore(rangeEnd) || next.isSame(rangeEnd, 'day'))
-    ) {
-      dates.push(next);
-    }
-    return dates;
+  if (
+    (next.isAfter(rangeStart) || next.isSame(rangeStart, 'day')) &&
+    (next.isBefore(rangeEnd) || next.isSame(rangeEnd, 'day'))
+  ) {
+    return [next];
   }
-
-  // Backward from nextRenewalDate
-  let d = next;
-  while (d.isAfter(rangeStart) || d.isSame(rangeStart, 'day')) {
-    if (d.isBefore(rangeEnd) || d.isSame(rangeEnd, 'day')) {
-      dates.push(d);
-    }
-    d = d.subtract(cycleDays, 'day');
-    if (d.isBefore(rangeStart.subtract(1, 'day'))) break;
-  }
-
-  // Forward from nextRenewalDate
-  d = next.add(cycleDays, 'day');
-  while (d.isBefore(rangeEnd) || d.isSame(rangeEnd, 'day')) {
-    if (d.isAfter(rangeStart) || d.isSame(rangeStart, 'day')) {
-      dates.push(d);
-    }
-    d = d.add(cycleDays, 'day');
-  }
-
-  return dates;
+  return [];
 }
 
 const WEEKDAYS_ZH = ['日', '一', '二', '三', '四', '五', '六'];
@@ -88,7 +64,9 @@ export default function CalendarView() {
   const mouseStartX = useRef<number>(0);
   const isDragging = useRef(false);
 
-  useEffect(() => {
+  const [renewingId, setRenewingId] = useState<string | null>(null);
+
+  const fetchSubscriptions = useCallback(() => {
     fetch('/api/subscriptions?active=true')
       .then((r) => r.json())
       .then((data) => {
@@ -97,6 +75,28 @@ export default function CalendarView() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, [fetchSubscriptions]);
+
+  const handleRenew = async (subId: string) => {
+    setRenewingId(subId);
+    try {
+      const res = await fetch(`/api/subscriptions/${subId}/renew`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(locale === 'zh' ? '续费成功' : 'Renewed successfully');
+        fetchSubscriptions();
+      } else {
+        toast.error(data.error || 'Error');
+      }
+    } catch {
+      toast.error(locale === 'zh' ? '续费失败' : 'Renew failed');
+    } finally {
+      setRenewingId(null);
+    }
+  };
 
   const renewalMap = useMemo(() => {
     const rangeStart = currentMonth.startOf('month').startOf('week');
@@ -343,6 +343,18 @@ export default function CalendarView() {
                       >
                         {statusText}
                       </Badge>
+                      {ev.sub.cycle !== 'ONE_TIME' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-auto h-7 gap-1 text-xs"
+                          disabled={renewingId === ev.sub.id}
+                          onClick={() => handleRenew(ev.sub.id)}
+                        >
+                          <RotateCw className={cn('size-3', renewingId === ev.sub.id && 'animate-spin')} />
+                          {t('calendar.renew')}
+                        </Button>
+                      )}
                     </div>
                     <div className="space-y-0.5 text-sm text-muted-foreground">
                       <p>{t('calendar.amount')}: <span className="font-medium text-foreground">{getCurrencySymbol(ev.sub.currency)}{ev.sub.amount.toFixed(2)}</span></p>

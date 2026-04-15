@@ -117,6 +117,7 @@ export default function SubscriptionsPage() {
         loading={loading}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onRenew={fetchSubscriptions}
       />
 
       <SubscriptionForm

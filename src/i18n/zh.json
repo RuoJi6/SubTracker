@@ -159,6 +159,9 @@
   "calendar": {
     "title": "日历视图",
     "renewal": "续费",
+    "renew": "续费",
+    "renewSuccess": "续费成功",
+    "renewFailed": "续费失败",
     "noEvents": "暂无续费事件",
     "today": "今天",
     "prevMonth": "上月",

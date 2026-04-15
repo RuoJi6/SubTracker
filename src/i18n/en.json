@@ -159,6 +159,9 @@
   "calendar": {
     "title": "Calendar View",
     "renewal": "Renewal",
+    "renew": "Renew",
+    "renewSuccess": "Renewed successfully",
+    "renewFailed": "Renew failed",
     "noEvents": "No renewal events",
     "today": "Today",
     "prevMonth": "Prev",
