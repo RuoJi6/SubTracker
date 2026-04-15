@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 
 const FRANKFURTER_API = 'https://api.frankfurter.app';
+const FALLBACK_API = 'https://open.er-api.com/v6/latest';
 
 export async function fetchExchangeRate(
   base: string,
@@ -26,7 +27,8 @@ export async function fetchExchangeRate(
     return cached.rate;
   }
 
-  // Fetch from API
+  // Try frankfurter.app first
+  let rate: number | null = null;
   try {
     const endpoint = date ? `/${date}` : '/latest';
     const res = await fetch(
@@ -34,17 +36,28 @@ export async function fetchExchangeRate(
       { next: { revalidate: 3600 } }
     );
 
-    if (!res.ok) {
-      throw new Error(`Exchange rate API error: ${res.status}`);
+    if (res.ok) {
+      const data = await res.json();
+      rate = data.rates?.[target] ?? null;
     }
+  } catch {
+    // frankfurter failed, try fallback
+  }
 
-    const data = await res.json();
-    const rate = data.rates[target];
-
-    if (!rate) {
-      throw new Error(`Rate not found for ${base} -> ${target}`);
+  // Fallback to open.er-api.com (supports more currencies, latest only)
+  if (!rate) {
+    try {
+      const res = await fetch(`${FALLBACK_API}/${base}`, { next: { revalidate: 3600 } });
+      if (res.ok) {
+        const data = await res.json();
+        rate = data.rates?.[target] ?? null;
+      }
+    } catch {
+      // fallback also failed
     }
+  }
 
+  if (rate) {
     // Cache the result
     await prisma.exchangeRateCache.upsert({
       where: {
@@ -62,18 +75,17 @@ export async function fetchExchangeRate(
         date: dateStr,
       },
     });
-
     return rate;
-  } catch (error) {
-    console.error('Failed to fetch exchange rate:', error);
-    // Fallback: try to find most recent cached rate
-    const fallback = await prisma.exchangeRateCache.findFirst({
-      where: { baseCurrency: base, targetCurrency: target },
-      orderBy: { date: 'desc' },
-    });
-    if (fallback) return fallback.rate;
-    throw error;
   }
+
+  // Last resort: try most recent cached rate
+  const fallback = await prisma.exchangeRateCache.findFirst({
+    where: { baseCurrency: base, targetCurrency: target },
+    orderBy: { date: 'desc' },
+  });
+  if (fallback) return fallback.rate;
+
+  throw new Error(`Exchange rate not available for ${base} -> ${target}`);
 }
 
 export async function convertAmount(
