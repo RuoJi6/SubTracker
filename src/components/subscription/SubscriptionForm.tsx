@@ -20,6 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface SubscriptionFormProps {
   open: boolean;
@@ -65,7 +66,7 @@ const defaultForm = {
 };
 
 export default function SubscriptionForm({ open, onClose, onSubmit, initialValues }: SubscriptionFormProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ ...defaultForm });
   const [customMethods, setCustomMethods] = useState<Array<{ id: string; name: string }>>([]);
@@ -207,7 +208,9 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
               <Label>{t('subscription.currency')}</Label>
               <Select value={form.currency} onValueChange={(v) => updateField('currency', v ?? 'USD')}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(() => { const c = currencies.find(cur => cur.code === form.currency); return c ? `${c.symbol} ${c.code} - ${c.nameZh}` : form.currency; })()}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
                   {currencies.map((c) => (
@@ -262,19 +265,21 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>{t('subscription.startDate')}</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.startDate}
-                onChange={(e) => handleStartDateChange(e.target.value)}
+                onChange={handleStartDateChange}
+                locale={locale}
+                placeholder={t('subscription.startDate')}
               />
             </div>
             {form.cycle !== 'ONE_TIME' && (
               <div className="space-y-1.5">
                 <Label>{t('subscription.nextRenewal')}</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={form.nextRenewalDate}
-                  onChange={(e) => updateField('nextRenewalDate', e.target.value)}
+                  onChange={(v) => updateField('nextRenewalDate', v)}
+                  locale={locale}
+                  placeholder={t('subscription.nextRenewal')}
                 />
               </div>
             )}
@@ -285,7 +290,9 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
             <Label>{t('subscription.category')}</Label>
             <Select value={form.category || '_none'} onValueChange={(v) => updateField('category', (v ?? '') === '_none' ? '' : (v ?? ''))}>
               <SelectTrigger>
-                <SelectValue placeholder={t('common.select')} />
+                <SelectValue>
+                  {form.category ? t(`subscription.categories.${form.category}`) : t('common.select')}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none">-</SelectItem>
@@ -301,7 +308,13 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
             <Label>{t('subscription.paymentMethod')}</Label>
             <Select value={form.paymentMethod || '_none'} onValueChange={(v) => updateField('paymentMethod', (v ?? '') === '_none' ? '' : (v ?? ''))}>
               <SelectTrigger>
-                <SelectValue placeholder={t('common.select')} />
+                <SelectValue>
+                  {form.paymentMethod
+                    ? (paymentMethodOptions.includes(form.paymentMethod)
+                        ? t(`subscription.paymentMethods.${form.paymentMethod}`)
+                        : form.paymentMethod)
+                    : t('common.select')}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none">-</SelectItem>

@@ -239,7 +239,9 @@ export default function SettingsPage() {
               <Label>{t('settings.displayCurrency')}</Label>
               <Select value={formValues.displayCurrency ?? ''} onValueChange={(val) => updateField('displayCurrency', val ?? '')}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('settings.displayCurrency')} />
+                  <SelectValue>
+                    {(() => { const c = currencies.find(cur => cur.code === formValues.displayCurrency); return c ? `${c.symbol} ${c.code} - ${c.nameZh}` : (formValues.displayCurrency || t('settings.displayCurrency')); })()}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {currencies.map((c) => (
@@ -254,7 +256,9 @@ export default function SettingsPage() {
               <Label>{t('settings.language')}</Label>
               <Select value={formValues.language ?? ''} onValueChange={(val) => updateField('language', val ?? '')}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('settings.language')} />
+                  <SelectValue>
+                    {formValues.language === 'zh' ? '中文' : formValues.language === 'en' ? 'English' : t('settings.language')}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="zh">中文</SelectItem>
@@ -266,7 +270,9 @@ export default function SettingsPage() {
               <Label>{t('settings.timezone')}</Label>
               <Select value={formValues.timezone ?? ''} onValueChange={(val) => updateField('timezone', val ?? '')}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('settings.timezone')} />
+                  <SelectValue>
+                    {formValues.timezone || t('settings.timezone')}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Asia/Shanghai">Asia/Shanghai (UTC+8)</SelectItem>

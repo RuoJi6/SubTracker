@@ -18,7 +18,16 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   )
 }
 
-function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+function SelectValue({ className, children, ...props }: SelectPrimitive.Value.Props & { children?: React.ReactNode }) {
+  // When children are provided, render them directly to bypass
+  // the base-ui label resolution issue with Portal-mounted items
+  if (children) {
+    return (
+      <span data-slot="select-value" className={cn("flex flex-1 text-left", className)}>
+        {children as React.ReactNode}
+      </span>
+    )
+  }
   return (
     <SelectPrimitive.Value
       data-slot="select-value"

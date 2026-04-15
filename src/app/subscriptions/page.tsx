@@ -93,7 +93,9 @@ export default function SubscriptionsPage() {
             onValueChange={(val) => setFilterCategory(val || undefined)}
           >
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder={t('subscription.category')} />
+              <SelectValue>
+                {filterCategory ? t(`subscription.categories.${filterCategory}`) : (locale === 'zh' ? '全部分类' : 'All categories')}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">{locale === 'zh' ? '全部分类' : 'All categories'}</SelectItem>
