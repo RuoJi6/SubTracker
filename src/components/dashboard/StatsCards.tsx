@@ -547,7 +547,7 @@ export default function StatsCards() {
             <DialogTitle>{`${t('dashboard.activeCount')} (${activeCount})`}</DialogTitle>
           </DialogHeader>
           <div className="space-y-0">
-            <div className="grid grid-cols-[2fr_1.5fr_1fr_2fr_1fr] text-xs font-medium text-muted-foreground px-2 py-2 border-b border-border">
+            <div className="grid grid-cols-[2fr_1.2fr_1fr_2.5fr_1fr] text-xs font-medium text-muted-foreground px-2 py-2 border-b border-border">
               <span>{t('subscription.name')}</span>
               <span>{t('subscription.amount')}</span>
               <span>{t('subscription.cycle')}</span>
@@ -560,14 +560,14 @@ export default function StatsCards() {
                 <div
                   key={sub.id}
                   onClick={() => { setShowActiveList(false); setDetailSub(sub); }}
-                  className="grid grid-cols-[2fr_1.5fr_1fr_2fr_1fr] items-center text-sm py-2.5 px-2 border-b border-border/50 last:border-0 cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="grid grid-cols-[2fr_1.2fr_1fr_2.5fr_1fr] items-center text-sm py-2.5 px-2 border-b border-border/50 last:border-0 cursor-pointer hover:bg-accent/50 transition-colors"
                 >
                   <span className="font-medium truncate pr-2">{sub.name}</span>
                   <span className="tabular-nums">{getCurrencySymbol(sub.currency)}{sub.amount.toFixed(2)}</span>
                   <span>
                     <Badge variant="secondary" className="text-xs">{getCycleLabel(sub.cycle, locale)}</Badge>
                   </span>
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                     {sub.cycle === 'ONE_TIME' ? (
                       <Badge className="bg-purple-100 text-purple-700 text-xs">{locale === 'zh' ? '买断' : 'One-time'}</Badge>
                     ) : (
@@ -576,7 +576,7 @@ export default function StatsCards() {
                         <Badge
                           variant={days !== null && days <= 0 ? 'destructive' : 'outline'}
                           className={cn(
-                            'text-xs',
+                            'text-xs shrink-0',
                             days !== null && days > 0 && days <= 3 && 'bg-amber-100 text-amber-700 border-amber-200',
                             days !== null && days > 3 && days <= 7 && 'bg-blue-100 text-blue-700 border-blue-200',
                             days !== null && days > 7 && 'bg-green-100 text-green-700 border-green-200'
