@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { checkAndSendNotifications } from '@/lib/notification/scheduler';
 
-// This endpoint is called by Vercel Cron or manually
+// Manual trigger endpoint for notification checks
 export async function GET(request: Request) {
-  // Verify cron secret for Vercel Cron
+  // Verify cron secret if configured
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 

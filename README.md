@@ -1,6 +1,6 @@
 # SubTracker - 软件订阅管理系统
 
-一个全功能的软件订阅管理工具，支持多币种汇率转换、日历可视化、多渠道消息提醒，可通过 Docker 和 Vercel 部署。
+一个全功能的软件订阅管理工具，支持多币种汇率转换、日历可视化、多渠道消息提醒，通过 Docker 容器部署。
 
 ## ✨ 功能特性
 
@@ -41,7 +41,7 @@
 | UI | Ant Design 5 + Tailwind CSS |
 | 数据库 | SQLite + Prisma ORM |
 | 汇率 | frankfurter.app（免费，无需 API Key） |
-| 定时任务 | node-cron（Docker）/ Vercel Cron |
+| 定时任务 | node-cron |
 | 邮件 | nodemailer（SMTP） |
 | 日历 | ical-generator |
 | 认证 | JWT（jsonwebtoken + jose） |
@@ -89,19 +89,6 @@ docker run -d -p 3000:3000 \
   subtracker
 ```
 
-### Vercel 部署
-
-> ⚠️ 注意：Vercel 的 serverless 环境不持久化文件系统，SQLite 数据会在函数冷启动后丢失。
-> 生产环境建议使用 [Turso](https://turso.tech)（LibSQL）替代本地 SQLite。
-
-1. Fork 本仓库
-2. 在 Vercel 中导入项目
-3. 设置环境变量（参考 `.env.example`）
-4. 添加 `DEPLOY_MODE=vercel` 环境变量
-5. 部署
-
-Vercel Cron 已配置为每 30 分钟检查通知（见 `vercel.json`）。
-
 ## ⚙️ 环境变量
 
 | 变量 | 必填 | 说明 | 默认值 |
@@ -110,7 +97,6 @@ Vercel Cron 已配置为每 30 分钟检查通知（见 `vercel.json`）。
 | `AUTH_PASSWORD` | ✅ | 登录密码 | `admin123` |
 | `JWT_SECRET` | ✅ | JWT 签名密钥 | `default-secret` |
 | `DATABASE_URL` | ✅ | 数据库连接地址 | `file:./data/subtracker.db` |
-| `DEPLOY_MODE` | ❌ | 部署模式（`docker` / `vercel`） | `docker` |
 | `DINGTALK_WEBHOOK` | ❌ | 钉钉机器人 Webhook URL | - |
 | `DINGTALK_SECRET` | ❌ | 钉钉机器人签名密钥 | - |
 | `SMTP_HOST` | ❌ | SMTP 服务器地址 | - |
@@ -147,8 +133,7 @@ Vercel Cron 已配置为每 30 分钟检查通知（见 `vercel.json`）。
 │   ├── i18n/            # 国际化语言包
 │   └── types/           # TypeScript 类型定义
 ├── Dockerfile           # Docker 构建文件
-├── docker-compose.yml   # Docker Compose 配置
-└── vercel.json          # Vercel 部署配置
+└── docker-compose.yml   # Docker Compose 配置
 ```
 
 ## 📜 常用命令

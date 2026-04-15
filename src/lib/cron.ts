@@ -4,11 +4,6 @@ import { checkAndSendNotifications } from './notification/scheduler';
 let cronJob: ScheduledTask | null = null;
 
 export function startCronJobs() {
-  if (process.env.DEPLOY_MODE === 'vercel') {
-    console.log('Vercel mode: skipping node-cron, using Vercel Cron instead');
-    return;
-  }
-
   if (cronJob) {
     console.log('Cron jobs already running');
     return;
