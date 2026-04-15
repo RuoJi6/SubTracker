@@ -7,6 +7,7 @@ interface CalendarOptions {
   calendarTitle?: string | null;
   calendarDesc?: string | null;
   language?: string;
+  refreshIntervalHours?: number;
 }
 
 export function generateICalendar(subscriptions: Subscription[], options?: CalendarOptions): string {
@@ -14,6 +15,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
     name: 'SubTracker Subscriptions',
     timezone: process.env.TZ || 'Asia/Shanghai',
     prodId: { company: 'SubTracker', product: 'Subscription Reminders' },
+    ttl: (options?.refreshIntervalHours ?? 6) * 3600,
   });
 
   const titleTemplate = options?.calendarTitle || DEFAULT_CALENDAR_TITLE;
@@ -55,26 +57,42 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
       continue;
     }
 
-    const repeating = cycleDays <= 7
-      ? { freq: ICalEventRepeatingFreq.WEEKLY, interval: cycleDays / 7 }
-      : cycleDays <= 31
-        ? { freq: ICalEventRepeatingFreq.MONTHLY, interval: 1 }
-        : cycleDays <= 92
-          ? { freq: ICalEventRepeatingFreq.MONTHLY, interval: 3 }
-          : { freq: ICalEventRepeatingFreq.YEARLY, interval: 1 };
+    // Auto-renew subscriptions: recurring event with RRULE
+    if (sub.autoRenew) {
+      const repeating = cycleDays <= 7
+        ? { freq: ICalEventRepeatingFreq.WEEKLY, interval: cycleDays / 7 }
+        : cycleDays <= 31
+          ? { freq: ICalEventRepeatingFreq.MONTHLY, interval: 1 }
+          : cycleDays <= 92
+            ? { freq: ICalEventRepeatingFreq.MONTHLY, interval: 3 }
+            : { freq: ICalEventRepeatingFreq.YEARLY, interval: 1 };
 
-    calendar.createEvent({
-      id: `${sub.id}-${renewalDate.toISOString().split('T')[0]}`,
-      start: renewalDate,
-      allDay: true,
-      summary,
-      description,
-      repeating,
-      alarms: [
-        { type: ICalAlarmType.display, trigger: 86400 },
-        { type: ICalAlarmType.display, trigger: 0 },
-      ],
-    });
+      calendar.createEvent({
+        id: `${sub.id}-${renewalDate.toISOString().split('T')[0]}`,
+        start: renewalDate,
+        allDay: true,
+        summary,
+        description,
+        repeating,
+        alarms: [
+          { type: ICalAlarmType.display, trigger: 86400 },
+          { type: ICalAlarmType.display, trigger: 0 },
+        ],
+      });
+    } else {
+      // Manual payment: single event at nextRenewalDate only
+      calendar.createEvent({
+        id: `${sub.id}-${renewalDate.toISOString().split('T')[0]}`,
+        start: renewalDate,
+        allDay: true,
+        summary,
+        description,
+        alarms: [
+          { type: ICalAlarmType.display, trigger: 86400 },
+          { type: ICalAlarmType.display, trigger: 0 },
+        ],
+      });
+    }
   }
 
   return calendar.toString();
