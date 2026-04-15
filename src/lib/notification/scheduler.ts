@@ -1,7 +1,8 @@
 import { prisma } from '../prisma';
 import { sendDingTalkMessage, buildRenewalMessage } from './dingtalk';
 import { sendEmail, buildRenewalEmailHtml } from './email';
-import { formatAmount } from '../currency';
+import { renderTemplate, DEFAULT_DINGTALK_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, TemplateData } from './template';
+import { formatAmount, getCycleLabel } from '../currency';
 import dayjs from 'dayjs';
 
 export async function checkAndSendNotifications(): Promise<{
@@ -43,21 +44,45 @@ export async function checkAndSendNotifications(): Promise<{
 
         const amount = formatAmount(sub.amount, sub.currency);
         const dateStr = renewalDate.format('YYYY-MM-DD');
+        const urgency = daysUntil === 0 ? '🔴 今天' : daysUntil === 1 ? '🟡 明天' : `📅 ${daysUntil}天后`;
+        const lang = settings?.language || 'zh';
+        const templateData: TemplateData = {
+          name: sub.name,
+          amount,
+          renewalDate: dateStr,
+          daysUntil,
+          urgency,
+          cycle: getCycleLabel(sub.cycle, lang),
+          category: sub.category || '-',
+          paymentMethod: sub.paymentMethod || '-',
+        };
 
         try {
           if (config.type === 'DINGTALK' && settings?.dingtalkWebhook) {
-            const msg = buildRenewalMessage(sub.name, amount, dateStr, daysUntil);
-            const ok = await sendDingTalkMessage(
-              settings.dingtalkWebhook,
-              settings.dingtalkSecret ?? null,
-              msg
-            );
+            let ok: boolean;
+            if (settings.dingtalkTemplate) {
+              const text = renderTemplate(settings.dingtalkTemplate, templateData);
+              ok = await sendDingTalkMessage(
+                settings.dingtalkWebhook,
+                settings.dingtalkSecret ?? null,
+                { msgtype: 'markdown', markdown: { title: `订阅续费提醒 - ${sub.name}`, text } }
+              );
+            } else {
+              const msg = buildRenewalMessage(sub.name, amount, dateStr, daysUntil);
+              ok = await sendDingTalkMessage(
+                settings.dingtalkWebhook,
+                settings.dingtalkSecret ?? null,
+                msg
+              );
+            }
             if (ok) result.sent++;
             else result.errors.push(`DingTalk failed for ${sub.name}`);
           }
 
           if (config.type === 'EMAIL' && settings?.smtpHost && settings?.emailTo) {
-            const html = buildRenewalEmailHtml(sub.name, amount, dateStr, daysUntil);
+            const html = settings?.emailTemplate
+              ? renderTemplate(settings.emailTemplate, templateData)
+              : buildRenewalEmailHtml(sub.name, amount, dateStr, daysUntil);
             const ok = await sendEmail(
               {
                 host: settings.smtpHost,

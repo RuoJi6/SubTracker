@@ -43,19 +43,21 @@ model NotificationConfig {
 }
 
 model GlobalSettings {
-  id               String  @id @default("global")
-  displayCurrency  String  @default("CNY")
-  language         String  @default("zh")
-  calendarToken    String?
-  dingtalkWebhook  String?
-  dingtalkSecret   String?
-  smtpHost         String?
-  smtpPort         Int?
-  smtpUser         String?
-  smtpPass         String?
-  emailFrom        String?
-  emailTo          String?
-  timezone         String  @default("Asia/Shanghai")
+  id                String  @id @default("global")
+  displayCurrency   String  @default("CNY")
+  language          String  @default("zh")
+  calendarToken     String?
+  dingtalkWebhook   String?
+  dingtalkSecret    String?
+  dingtalkTemplate  String? // Custom DingTalk markdown template with placeholders
+  smtpHost          String?
+  smtpPort          Int?
+  smtpUser          String?
+  smtpPass          String?
+  emailFrom         String?
+  emailTo           String?
+  emailTemplate     String? // Custom email HTML template with placeholders
+  timezone          String  @default("Asia/Shanghai")
 }
 
 model ExchangeRateCache {

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Card, Form, Input, InputNumber, Select, Button, Typography, Divider, Space, Alert, Popconfirm, App, Tag, Empty } from 'antd';
-import { CopyOutlined, ReloadOutlined, PlusOutlined, WalletOutlined, SendOutlined } from '@ant-design/icons';
+import { Card, Form, Input, InputNumber, Select, Button, Typography, Divider, Space, Alert, Popconfirm, App, Tag, Empty, Modal, Tabs } from 'antd';
+import { CopyOutlined, ReloadOutlined, PlusOutlined, WalletOutlined, SendOutlined, EyeOutlined, UndoOutlined } from '@ant-design/icons';
 import { useI18n } from '@/hooks/useI18n';
 import { currencies } from '@/lib/currency';
+import { TEMPLATE_PLACEHOLDERS, SAMPLE_DATA, DEFAULT_DINGTALK_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, renderTemplate } from '@/lib/notification/template';
 
 const { Title, Text } = Typography;
 
@@ -19,6 +20,7 @@ export default function SettingsPage() {
   const [addingMethod, setAddingMethod] = useState(false);
   const [testingDingtalk, setTestingDingtalk] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
+  const [previewType, setPreviewType] = useState<'dingtalk' | 'email' | null>(null);
   const { message } = App.useApp();
 
   const calendarUrl = typeof window !== 'undefined' && calendarToken
@@ -295,6 +297,71 @@ export default function SettingsPage() {
         </Card>
 
         <Card style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Title level={5} style={{ margin: 0 }}>{t('settings.dingtalkTemplate')} / {t('settings.emailTemplate')}</Title>
+          </div>
+          <Alert type="info" title={t('settings.templateHelp')} style={{ marginBottom: 12 }} />
+          <div style={{ marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            <Text type="secondary" style={{ marginRight: 8 }}>{t('settings.templatePlaceholders')}:</Text>
+            {TEMPLATE_PLACEHOLDERS.map((p) => (
+              <Tag key={p} color="blue" style={{ cursor: 'pointer' }} onClick={() => navigator.clipboard.writeText(`{${p}}`)}>
+                {`{${p}}`} - {t(`settings.placeholders.${p}`)}
+              </Tag>
+            ))}
+          </div>
+          <Tabs
+            items={[
+              {
+                key: 'dingtalk',
+                label: t('settings.dingtalkTemplate'),
+                children: (
+                  <div>
+                    <Form.Item name="dingtalkTemplate">
+                      <Input.TextArea
+                        rows={10}
+                        placeholder={DEFAULT_DINGTALK_TEMPLATE}
+                        style={{ fontFamily: 'monospace', fontSize: 13 }}
+                      />
+                    </Form.Item>
+                    <Space>
+                      <Button icon={<EyeOutlined />} onClick={() => setPreviewType('dingtalk')}>
+                        {t('settings.templatePreview')}
+                      </Button>
+                      <Button icon={<UndoOutlined />} onClick={() => form.setFieldsValue({ dingtalkTemplate: '' })}>
+                        {t('settings.templateReset')}
+                      </Button>
+                    </Space>
+                  </div>
+                ),
+              },
+              {
+                key: 'email',
+                label: t('settings.emailTemplate'),
+                children: (
+                  <div>
+                    <Form.Item name="emailTemplate">
+                      <Input.TextArea
+                        rows={12}
+                        placeholder={DEFAULT_EMAIL_TEMPLATE}
+                        style={{ fontFamily: 'monospace', fontSize: 13 }}
+                      />
+                    </Form.Item>
+                    <Space>
+                      <Button icon={<EyeOutlined />} onClick={() => setPreviewType('email')}>
+                        {t('settings.templatePreview')}
+                      </Button>
+                      <Button icon={<UndoOutlined />} onClick={() => form.setFieldsValue({ emailTemplate: '' })}>
+                        {t('settings.templateReset')}
+                      </Button>
+                    </Space>
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </Card>
+
+        <Card style={{ marginBottom: 16 }}>
           <Title level={5}>{t('notification.calendar')}</Title>
           <Alert
             type="info"
@@ -381,6 +448,33 @@ export default function SettingsPage() {
           {t('common.save')}
         </Button>
       </Form>
+
+      <Modal
+        open={previewType !== null}
+        onCancel={() => setPreviewType(null)}
+        footer={null}
+        title={t('settings.templatePreview')}
+        width={560}
+      >
+        {previewType === 'dingtalk' && (
+          <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 13 }}>
+            {renderTemplate(
+              form.getFieldValue('dingtalkTemplate') || DEFAULT_DINGTALK_TEMPLATE,
+              SAMPLE_DATA
+            )}
+          </div>
+        )}
+        {previewType === 'email' && (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: renderTemplate(
+                form.getFieldValue('emailTemplate') || DEFAULT_EMAIL_TEMPLATE,
+                SAMPLE_DATA
+              ),
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
