@@ -209,6 +209,67 @@ export default function StatsCards() {
         </Col>
       </Row>
 
+      {/* Expired subscriptions */}
+      {expired.length > 0 && (
+        <Card
+          title={<><WarningOutlined style={{ color: '#f5222d', marginRight: 8 }} />{t('dashboard.expiredSubscriptions')}</>}
+          style={{ marginTop: 16, borderColor: '#ffccc7' }}
+        >
+          {expired.map((sub) => {
+            const days = dayjs().diff(dayjs(sub.nextRenewalDate), 'day');
+            return (
+              <div
+                key={sub.id}
+                onClick={() => setDetailSub(sub)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', borderRadius: 4 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#fff2f0')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <div>
+                  <Text strong>{sub.name}</Text>
+                  <br />
+                  <Text type="secondary">
+                    {getCurrencySymbol(sub.currency)}{sub.amount.toFixed(2)} · {locale === 'zh' ? '到期' : 'Expired'}: {dayjs(sub.nextRenewalDate).format('YYYY-MM-DD')}
+                  </Text>
+                </div>
+                <Tag color="red">
+                  {locale === 'zh' ? `已过期 ${days} 天` : `${days}d overdue`}
+                </Tag>
+              </div>
+            );
+          })}
+        </Card>
+      )}
+
+      {/* Upcoming renewals */}
+      {upcoming.length > 0 && (
+        <Card title={t('dashboard.upcomingRenewals')} style={{ marginTop: 16 }}>
+          {upcoming.map((sub) => {
+            const days = dayjs(sub.nextRenewalDate).diff(dayjs(), 'day');
+            return (
+              <div
+                key={sub.id}
+                onClick={() => setDetailSub(sub)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', borderRadius: 4 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f5')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <div>
+                  <Text strong>{sub.name}</Text>
+                  <br />
+                  <Text type="secondary">
+                    {getCurrencySymbol(sub.currency)}{sub.amount.toFixed(2)} · {dayjs(sub.nextRenewalDate).format('YYYY-MM-DD')}
+                  </Text>
+                </div>
+                <Tag color={days <= 0 ? 'red' : days <= 3 ? 'orange' : 'blue'}>
+                  {days <= 0 ? (locale === 'zh' ? '今天到期' : 'Due today') : `${days}d`}
+                </Tag>
+              </div>
+            );
+          })}
+        </Card>
+      )}
+
       {/* Charts */}
       {recurring.length > 0 && (
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
@@ -249,67 +310,6 @@ export default function StatsCards() {
             </Card>
           </Col>
         </Row>
-      )}
-
-      {/* Upcoming renewals */}
-      {upcoming.length > 0 && (
-        <Card title={t('dashboard.upcomingRenewals')} style={{ marginTop: 16 }}>
-          {upcoming.map((sub) => {
-            const days = dayjs(sub.nextRenewalDate).diff(dayjs(), 'day');
-            return (
-              <div
-                key={sub.id}
-                onClick={() => setDetailSub(sub)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', borderRadius: 4 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f5')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-              >
-                <div>
-                  <Text strong>{sub.name}</Text>
-                  <br />
-                  <Text type="secondary">
-                    {getCurrencySymbol(sub.currency)}{sub.amount.toFixed(2)} · {dayjs(sub.nextRenewalDate).format('YYYY-MM-DD')}
-                  </Text>
-                </div>
-                <Tag color={days <= 0 ? 'red' : days <= 3 ? 'orange' : 'blue'}>
-                  {days <= 0 ? (locale === 'zh' ? '今天到期' : 'Due today') : `${days}d`}
-                </Tag>
-              </div>
-            );
-          })}
-        </Card>
-      )}
-
-      {/* Expired subscriptions */}
-      {expired.length > 0 && (
-        <Card
-          title={<><WarningOutlined style={{ color: '#f5222d', marginRight: 8 }} />{t('dashboard.expiredSubscriptions')}</>}
-          style={{ marginTop: 16, borderColor: '#ffccc7' }}
-        >
-          {expired.map((sub) => {
-            const days = dayjs().diff(dayjs(sub.nextRenewalDate), 'day');
-            return (
-              <div
-                key={sub.id}
-                onClick={() => setDetailSub(sub)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', borderRadius: 4 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#fff2f0')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-              >
-                <div>
-                  <Text strong>{sub.name}</Text>
-                  <br />
-                  <Text type="secondary">
-                    {getCurrencySymbol(sub.currency)}{sub.amount.toFixed(2)} · {locale === 'zh' ? '到期' : 'Expired'}: {dayjs(sub.nextRenewalDate).format('YYYY-MM-DD')}
-                  </Text>
-                </div>
-                <Tag color="red">
-                  {locale === 'zh' ? `已过期 ${days} 天` : `${days}d overdue`}
-                </Tag>
-              </div>
-            );
-          })}
-        </Card>
       )}
 
       {/* Breakdown Modal */}
