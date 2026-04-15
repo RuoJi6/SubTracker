@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Row, Col, Card, Statistic, Tag, Typography, Spin } from 'antd';
+import { Row, Col, Card, Statistic, Tag, Typography, Spin, Modal, Table } from 'antd';
 import {
   DollarOutlined,
   AppstoreOutlined,
@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useI18n } from '@/hooks/useI18n';
-import { getCurrencySymbol } from '@/lib/currency';
+import { getCurrencySymbol, getCycleLabel } from '@/lib/currency';
 
 const { Text } = Typography;
 
@@ -30,10 +30,11 @@ interface Settings {
 }
 
 export default function StatsCards() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [settings, setSettings] = useState<Settings>({ displayCurrency: 'CNY' });
   const [loading, setLoading] = useState(true);
+  const [breakdownType, setBreakdownType] = useState<'monthly' | 'yearly' | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -51,7 +52,7 @@ export default function StatsCards() {
   const displayCurrency = settings.displayCurrency || 'CNY';
   const symbol = getCurrencySymbol(displayCurrency);
 
-  const monthlyTotal = subscriptions.reduce((sum, sub) => {
+  const breakdownData = subscriptions.map((sub) => {
     let monthlyAmount = sub.amount;
     switch (sub.cycle) {
       case 'WEEKLY': monthlyAmount = sub.amount * 4.33; break;
@@ -61,9 +62,18 @@ export default function StatsCards() {
     if (sub.currency !== displayCurrency && sub.exchangeRateAtPurchase) {
       monthlyAmount *= sub.exchangeRateAtPurchase;
     }
-    return sum + monthlyAmount;
-  }, 0);
+    return {
+      key: sub.id,
+      name: sub.name,
+      originalAmount: sub.amount,
+      originalCurrency: sub.currency,
+      cycle: sub.cycle,
+      monthly: monthlyAmount,
+      yearly: monthlyAmount * 12,
+    };
+  }).sort((a, b) => b.monthly - a.monthly);
 
+  const monthlyTotal = breakdownData.reduce((sum, d) => sum + d.monthly, 0);
   const yearlyTotal = monthlyTotal * 12;
   const activeCount = subscriptions.length;
 
@@ -75,7 +85,7 @@ export default function StatsCards() {
     <div>
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card hoverable onClick={() => setBreakdownType('monthly')} style={{ cursor: 'pointer' }}>
             <Statistic
               title={t('dashboard.totalMonthly')}
               value={monthlyTotal}
@@ -85,7 +95,7 @@ export default function StatsCards() {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card hoverable onClick={() => setBreakdownType('yearly')} style={{ cursor: 'pointer' }}>
             <Statistic
               title={t('dashboard.totalYearly')}
               value={yearlyTotal}
@@ -136,6 +146,65 @@ export default function StatsCards() {
           })}
         </Card>
       )}
+
+      <Modal
+        open={breakdownType !== null}
+        onCancel={() => setBreakdownType(null)}
+        footer={null}
+        title={breakdownType === 'monthly' ? t('dashboard.totalMonthly') : t('dashboard.totalYearly')}
+        width={640}
+      >
+        <Table
+          dataSource={breakdownData}
+          pagination={false}
+          size="small"
+          summary={() => (
+            <Table.Summary.Row>
+              <Table.Summary.Cell index={0}><Text strong>{locale === 'zh' ? '合计' : 'Total'}</Text></Table.Summary.Cell>
+              <Table.Summary.Cell index={1} />
+              <Table.Summary.Cell index={2} />
+              <Table.Summary.Cell index={3}>
+                <Text strong style={{ color: '#1890ff' }}>
+                  {symbol}{(breakdownType === 'monthly' ? monthlyTotal : yearlyTotal).toFixed(2)}
+                </Text>
+              </Table.Summary.Cell>
+            </Table.Summary.Row>
+          )}
+          columns={[
+            {
+              title: t('subscription.name'),
+              dataIndex: 'name',
+              key: 'name',
+              render: (name: string) => <Text strong>{name}</Text>,
+            },
+            {
+              title: locale === 'zh' ? '原始金额' : 'Original',
+              key: 'original',
+              render: (_: unknown, record: typeof breakdownData[0]) => (
+                <Text>{getCurrencySymbol(record.originalCurrency)}{record.originalAmount.toFixed(2)}</Text>
+              ),
+            },
+            {
+              title: t('subscription.cycle'),
+              dataIndex: 'cycle',
+              key: 'cycle',
+              render: (cycle: string) => <Tag>{getCycleLabel(cycle, locale)}</Tag>,
+            },
+            {
+              title: breakdownType === 'monthly' ? t('dashboard.totalMonthly') : t('dashboard.totalYearly'),
+              key: 'converted',
+              sorter: (a: typeof breakdownData[0], b: typeof breakdownData[0]) =>
+                breakdownType === 'monthly' ? a.monthly - b.monthly : a.yearly - b.yearly,
+              defaultSortOrder: 'descend' as const,
+              render: (_: unknown, record: typeof breakdownData[0]) => (
+                <Text style={{ color: '#1890ff', fontWeight: 600 }}>
+                  {symbol}{(breakdownType === 'monthly' ? record.monthly : record.yearly).toFixed(2)}
+                </Text>
+              ),
+            },
+          ]}
+        />
+      </Modal>
     </div>
   );
 }
