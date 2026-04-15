@@ -57,6 +57,8 @@ model GlobalSettings {
   emailFrom         String?
   emailTo           String?
   emailTemplate     String? // Custom email HTML template with placeholders
+  calendarTitle     String? // Custom calendar event title template
+  calendarDesc      String? // Custom calendar event description template
   timezone          String  @default("Asia/Shanghai")
 }
 

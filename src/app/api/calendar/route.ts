@@ -42,7 +42,15 @@ export async function GET(request: NextRequest) {
       where: { isActive: true },
     });
 
-    const ical = generateICalendar(subscriptions);
+    const settings = await prisma.globalSettings.findUnique({
+      where: { id: 'global' },
+    });
+
+    const ical = generateICalendar(subscriptions, {
+      calendarTitle: settings?.calendarTitle,
+      calendarDesc: settings?.calendarDesc,
+      language: settings?.language,
+    });
 
     return new NextResponse(ical, {
       headers: {

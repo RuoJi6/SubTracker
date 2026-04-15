@@ -61,6 +61,14 @@ export const DEFAULT_EMAIL_TEMPLATE = `<div style="max-width: 480px; margin: 0 a
   </div>
 </div>`;
 
+export const DEFAULT_CALENDAR_TITLE = `🔔 {name} 续费`;
+
+export const DEFAULT_CALENDAR_DESC = `订阅续费提醒
+金额: {amount}
+周期: {cycle}
+分类: {category}
+支付方式: {paymentMethod}`;
+
 export function renderTemplate(template: string, data: TemplateData): string {
   let result = template;
   for (const key of TEMPLATE_PLACEHOLDERS) {

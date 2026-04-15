@@ -5,7 +5,7 @@ import { Card, Form, Input, InputNumber, Select, Button, Typography, Divider, Sp
 import { CopyOutlined, ReloadOutlined, PlusOutlined, WalletOutlined, SendOutlined, EyeOutlined, UndoOutlined } from '@ant-design/icons';
 import { useI18n } from '@/hooks/useI18n';
 import { currencies } from '@/lib/currency';
-import { TEMPLATE_PLACEHOLDERS, SAMPLE_DATA, DEFAULT_DINGTALK_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, renderTemplate } from '@/lib/notification/template';
+import { TEMPLATE_PLACEHOLDERS, SAMPLE_DATA, DEFAULT_DINGTALK_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, DEFAULT_CALENDAR_TITLE, DEFAULT_CALENDAR_DESC, renderTemplate } from '@/lib/notification/template';
 
 const { Title, Text } = Typography;
 
@@ -20,7 +20,7 @@ export default function SettingsPage() {
   const [addingMethod, setAddingMethod] = useState(false);
   const [testingDingtalk, setTestingDingtalk] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
-  const [previewType, setPreviewType] = useState<'dingtalk' | 'email' | null>(null);
+  const [previewType, setPreviewType] = useState<'dingtalk' | 'email' | 'calendar' | null>(null);
   const { message } = App.useApp();
 
   const calendarUrl = typeof window !== 'undefined' && calendarToken
@@ -357,6 +357,41 @@ export default function SettingsPage() {
                   </div>
                 ),
               },
+              {
+                key: 'calendar',
+                label: t('settings.calendarTemplate'),
+                children: (
+                  <div>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                      {t('settings.calendarTitleLabel')}
+                    </Text>
+                    <Form.Item name="calendarTitle">
+                      <Input
+                        placeholder={DEFAULT_CALENDAR_TITLE}
+                        style={{ fontFamily: 'monospace', fontSize: 13 }}
+                      />
+                    </Form.Item>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                      {t('settings.calendarDescLabel')}
+                    </Text>
+                    <Form.Item name="calendarDesc">
+                      <Input.TextArea
+                        rows={6}
+                        placeholder={DEFAULT_CALENDAR_DESC}
+                        style={{ fontFamily: 'monospace', fontSize: 13 }}
+                      />
+                    </Form.Item>
+                    <Space>
+                      <Button icon={<EyeOutlined />} onClick={() => setPreviewType('calendar')}>
+                        {t('settings.templatePreview')}
+                      </Button>
+                      <Button icon={<UndoOutlined />} onClick={() => form.setFieldsValue({ calendarTitle: '', calendarDesc: '' })}>
+                        {t('settings.templateReset')}
+                      </Button>
+                    </Space>
+                  </div>
+                ),
+              },
             ]}
           />
         </Card>
@@ -473,6 +508,28 @@ export default function SettingsPage() {
               ),
             }}
           />
+        )}
+        {previewType === 'calendar' && (
+          <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, fontFamily: 'monospace', fontSize: 13 }}>
+            <div style={{ marginBottom: 12 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>{t('settings.calendarTitleLabel')}:</Text>
+              <div style={{ fontWeight: 600, fontSize: 16, marginTop: 4 }}>
+                {renderTemplate(
+                  form.getFieldValue('calendarTitle') || DEFAULT_CALENDAR_TITLE,
+                  SAMPLE_DATA
+                )}
+              </div>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>{t('settings.calendarDescLabel')}:</Text>
+              <div style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>
+                {renderTemplate(
+                  form.getFieldValue('calendarDesc') || DEFAULT_CALENDAR_DESC,
+                  SAMPLE_DATA
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </Modal>
     </div>

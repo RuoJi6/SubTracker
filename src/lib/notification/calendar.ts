@@ -1,19 +1,44 @@
 import icalGenerator, { ICalEventRepeatingFreq, ICalAlarmType } from 'ical-generator';
 import { Subscription } from '@prisma/client';
-import { getCycleDays } from '../currency';
+import { getCycleDays, formatAmount, getCycleLabel } from '../currency';
+import { renderTemplate, DEFAULT_CALENDAR_TITLE, DEFAULT_CALENDAR_DESC, TemplateData } from './template';
 
-export function generateICalendar(subscriptions: Subscription[]): string {
+interface CalendarOptions {
+  calendarTitle?: string | null;
+  calendarDesc?: string | null;
+  language?: string;
+}
+
+export function generateICalendar(subscriptions: Subscription[], options?: CalendarOptions): string {
   const calendar = icalGenerator({
     name: 'SubTracker Subscriptions',
     timezone: process.env.TZ || 'Asia/Shanghai',
     prodId: { company: 'SubTracker', product: 'Subscription Reminders' },
   });
 
+  const titleTemplate = options?.calendarTitle || DEFAULT_CALENDAR_TITLE;
+  const descTemplate = options?.calendarDesc || DEFAULT_CALENDAR_DESC;
+  const lang = options?.language || 'zh';
+
   for (const sub of subscriptions) {
     if (!sub.isActive) continue;
 
     const cycleDays = getCycleDays(sub.cycle, sub.customCycleDays ?? undefined);
     const renewalDate = new Date(sub.nextRenewalDate);
+
+    const templateData: TemplateData = {
+      name: sub.name,
+      amount: formatAmount(sub.amount, sub.currency),
+      renewalDate: renewalDate.toISOString().split('T')[0],
+      daysUntil: 0,
+      urgency: lang === 'zh' ? '📅 续费日' : '📅 Renewal Day',
+      cycle: getCycleLabel(sub.cycle, lang),
+      category: sub.category || '-',
+      paymentMethod: sub.paymentMethod || '-',
+    };
+
+    const summary = renderTemplate(titleTemplate, templateData);
+    const description = renderTemplate(descTemplate, templateData);
 
     const repeating = cycleDays <= 7
       ? { freq: ICalEventRepeatingFreq.WEEKLY, interval: cycleDays / 7 }
@@ -27,8 +52,8 @@ export function generateICalendar(subscriptions: Subscription[]): string {
       id: `${sub.id}-${renewalDate.toISOString().split('T')[0]}`,
       start: renewalDate,
       allDay: true,
-      summary: `🔔 ${sub.name} 续费`,
-      description: `订阅续费提醒\n金额: ${sub.currency} ${sub.amount}\n周期: ${sub.cycle}`,
+      summary,
+      description,
       repeating,
       alarms: [
         { type: ICalAlarmType.display, trigger: 86400 },
