@@ -14,7 +14,8 @@
     "back": "Back",
     "active": "Active",
     "inactive": "Inactive",
-    "all": "All"
+    "all": "All",
+    "select": "Please select"
   },
   "auth": {
     "login": "Login",

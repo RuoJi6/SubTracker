@@ -14,7 +14,8 @@
     "back": "返回",
     "active": "活跃",
     "inactive": "已停用",
-    "all": "全部"
+    "all": "全部",
+    "select": "请选择"
   },
   "auth": {
     "login": "登录",
