@@ -113,7 +113,6 @@ export default function StatsCards() {
   const monthlyTotal = breakdownData.reduce((sum, d) => sum + d.monthly, 0);
   const yearlyTotal = monthlyTotal * 12;
   const oneTimeTotal = oneTimeData.reduce((sum, d) => sum + d.converted, 0);
-  const activeCount = subscriptions.length;
 
   // Upcoming renewals (within 7 days, recurring only)
   const upcoming = recurring
@@ -127,6 +126,12 @@ export default function StatsCards() {
   const expired = recurring
     .filter((s) => dayjs(s.nextRenewalDate).isBefore(dayjs(), 'day'))
     .sort((a, b) => dayjs(a.nextRenewalDate).diff(dayjs(b.nextRenewalDate)));
+
+  // Non-expired active subscriptions (for the active count card)
+  const nonExpired = subscriptions.filter((s) =>
+    s.cycle === 'ONE_TIME' || !dayjs(s.nextRenewalDate).isBefore(dayjs(), 'day')
+  );
+  const activeCount = nonExpired.length;
 
   // Pie chart data: monthly cost by subscription
   const pieData = useMemo(() => breakdownData
@@ -501,7 +506,7 @@ export default function StatsCards() {
         width={700}
       >
         <Table
-          dataSource={subscriptions.map(s => ({ ...s, key: s.id }))}
+          dataSource={nonExpired.map(s => ({ ...s, key: s.id }))}
           pagination={false}
           size="small"
           onRow={(record) => ({
