@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { Card, Modal, Typography, Spin, Tag, Button, Space, Tooltip } from 'antd';
-import { LeftOutlined, RightOutlined, CalendarOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
+import { ChevronLeft, ChevronRight, Calendar, Loader2 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { getCurrencySymbol, getCycleDays, getCycleLabel } from '@/lib/currency';
-
-const { Text, Title } = Typography;
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface Subscription {
   id: string;
@@ -27,10 +30,6 @@ interface RenewalEvent {
   date: Dayjs;
 }
 
-/**
- * Expand all renewal dates for a subscription within [rangeStart, rangeEnd].
- * Starting from nextRenewalDate, step forward/backward by cycle.
- */
 function getRenewalDatesInRange(
   sub: Subscription,
   rangeStart: Dayjs,
@@ -40,7 +39,6 @@ function getRenewalDatesInRange(
   const next = dayjs(sub.nextRenewalDate).startOf('day');
   const dates: Dayjs[] = [];
 
-  // Go backward from nextRenewalDate to cover rangeStart
   let d = next;
   while (d.isAfter(rangeStart) || d.isSame(rangeStart, 'day')) {
     if (d.isBefore(rangeEnd) || d.isSame(rangeEnd, 'day')) {
@@ -50,7 +48,6 @@ function getRenewalDatesInRange(
     if (d.isBefore(rangeStart.subtract(1, 'day'))) break;
   }
 
-  // Go forward from nextRenewalDate
   d = next.add(cycleDays, 'day');
   while (d.isBefore(rangeEnd) || d.isSame(rangeEnd, 'day')) {
     if (d.isAfter(rangeStart) || d.isSame(rangeStart, 'day')) {
@@ -73,10 +70,10 @@ export default function CalendarView() {
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Touch/swipe state
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
-  const calendarRef = useRef<HTMLDivElement>(null);
+  const mouseStartX = useRef<number>(0);
+  const isDragging = useRef(false);
 
   useEffect(() => {
     fetch('/api/subscriptions?active=true')
@@ -88,7 +85,6 @@ export default function CalendarView() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Build renewal events map for the current displayed month range
   const renewalMap = useMemo(() => {
     const rangeStart = currentMonth.startOf('month').startOf('week');
     const rangeEnd = currentMonth.endOf('month').endOf('week');
@@ -113,12 +109,10 @@ export default function CalendarView() {
     [renewalMap]
   );
 
-  // Navigation
   const goToday = () => setCurrentMonth(dayjs().startOf('month'));
   const goPrev = () => setCurrentMonth((m) => m.subtract(1, 'month'));
   const goNext = () => setCurrentMonth((m) => m.add(1, 'month'));
 
-  // Touch handlers for swipe
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -127,16 +121,11 @@ export default function CalendarView() {
   const handleTouchEnd = (e: React.TouchEvent) => {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
-    // Only trigger if horizontal swipe > 60px and more horizontal than vertical
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       if (dx < 0) goNext();
       else goPrev();
     }
   };
-
-  // Mouse drag support for desktop
-  const mouseStartX = useRef<number>(0);
-  const isDragging = useRef(false);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     mouseStartX.current = e.clientX;
@@ -158,7 +147,6 @@ export default function CalendarView() {
     setModalOpen(true);
   };
 
-  // Build calendar grid
   const calendarDays = useMemo(() => {
     const start = currentMonth.startOf('month').startOf('week');
     const end = currentMonth.endOf('month').endOf('week');
@@ -181,181 +169,186 @@ export default function CalendarView() {
 
   const today = dayjs().startOf('day');
   const weekdays = locale === 'zh' ? WEEKDAYS_ZH : WEEKDAYS_EN;
-
   const selectedEvents = selectedDate ? getEventsForDate(selectedDate) : [];
 
-  if (loading) return <Spin size="large" style={{ display: 'block', margin: '48px auto' }} />;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
-      <Card
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            <Space>
-              <CalendarOutlined />
-              <span>{t('calendar.title')}</span>
-            </Space>
-            <Space>
-              <Button size="small" icon={<LeftOutlined />} onClick={goPrev} />
-              <Title level={5} style={{ margin: 0, minWidth: 140, textAlign: 'center' }}>
+      <Card className="glass-card">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="h-5 w-5 text-primary" />
+              {t('calendar.title')}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={goPrev}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <h3 className="min-w-[140px] text-center font-semibold text-lg">
                 {currentMonth.format(locale === 'zh' ? 'YYYY年MM月' : 'MMMM YYYY')}
-              </Title>
-              <Button size="small" icon={<RightOutlined />} onClick={goNext} />
-              <Button size="small" type="link" onClick={goToday}>
+              </h3>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={goNext}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button variant="link" size="sm" onClick={goToday}>
                 {t('calendar.today')}
               </Button>
-            </Space>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {t('calendar.swipeHint')}
-            </Text>
+            </div>
+            <p className="text-xs text-muted-foreground">{t('calendar.swipeHint')}</p>
           </div>
-        }
-        styles={{ body: { padding: '8px 12px 12px' } }}
-      >
-        {/* Calendar Grid */}
-        <div
-          ref={calendarRef}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          style={{ userSelect: 'none', cursor: 'grab' }}
-        >
-          {/* Weekday headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
-            {weekdays.map((wd, i) => (
-              <div key={i} style={{ textAlign: 'center', fontWeight: 600, fontSize: 13, padding: '6px 0', color: i === 0 || i === 6 ? '#ff4d4f' : '#333' }}>
-                {wd}
+        </CardHeader>
+        <CardContent className="px-3 pb-3">
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            className="select-none cursor-grab"
+          >
+            {/* Weekday Headers */}
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {weekdays.map((wd, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'text-center text-xs font-semibold py-2',
+                    (i === 0 || i === 6) ? 'text-destructive' : 'text-foreground'
+                  )}
+                >
+                  {wd}
+                </div>
+              ))}
+            </div>
+
+            {/* Day Cells */}
+            {weeks.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7 gap-1">
+                {week.map((day) => {
+                  const events = getEventsForDate(day);
+                  const isToday = day.isSame(today, 'day');
+                  const isCurrentMonth = day.month() === currentMonth.month();
+                  const hasEvents = events.length > 0;
+
+                  return (
+                    <div
+                      key={day.format('YYYY-MM-DD')}
+                      onClick={() => handleDateClick(day)}
+                      className={cn(
+                        'min-h-[80px] p-1.5 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-sm',
+                        isToday ? 'border-primary border-2 bg-primary/5' : 'border-border/50',
+                        !isCurrentMonth && 'opacity-40',
+                        isCurrentMonth && hasEvents && 'bg-green-50 dark:bg-green-950/20',
+                        isCurrentMonth && !hasEvents && 'bg-background',
+                      )}
+                    >
+                      <div className={cn(
+                        'text-xs mb-1',
+                        isToday && 'font-bold text-primary',
+                        !isToday && (day.day() === 0 || day.day() === 6) && 'text-destructive',
+                      )}>
+                        {day.date()}
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {events.slice(0, 3).map((ev) => {
+                          const daysUntil = ev.date.diff(today, 'day');
+                          return (
+                            <Tooltip key={ev.sub.id}>
+                              <TooltipTrigger
+                                className={cn(
+                                  'text-[11px] leading-4 px-1 rounded text-white truncate block text-left',
+                                  daysUntil < 0 && 'bg-destructive',
+                                  daysUntil === 0 && 'bg-amber-500',
+                                  daysUntil > 0 && daysUntil <= 3 && 'bg-orange-500',
+                                  daysUntil > 3 && 'bg-green-500',
+                                )}
+                              >
+                                {ev.sub.name}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {ev.sub.name} · {getCurrencySymbol(ev.sub.currency)}{ev.sub.amount.toFixed(2)} · {getCycleLabel(ev.sub.cycle, locale)}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                        {events.length > 3 && (
+                          <span className="text-[10px] text-muted-foreground">+{events.length - 3}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Day cells */}
-          {weeks.map((week, wi) => (
-            <div key={wi} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
-              {week.map((day) => {
-                const events = getEventsForDate(day);
-                const isToday = day.isSame(today, 'day');
-                const isCurrentMonth = day.month() === currentMonth.month();
-                const hasEvents = events.length > 0;
+      {/* Date Detail Dialog */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="glass-card max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              {selectedDate?.format(locale === 'zh' ? 'YYYY年M月D日' : 'MMMM D, YYYY')}
+              {selectedEvents.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {selectedEvents.length} {t('calendar.renewal')}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedEvents.length > 0 ? (
+            <div className="space-y-0">
+              {selectedEvents.map((ev) => {
+                const daysUntil = ev.date.diff(today, 'day');
+                const statusText = daysUntil < 0
+                  ? t('calendar.overdue')
+                  : daysUntil === 0
+                    ? t('calendar.dueToday')
+                    : `${daysUntil} ${t('calendar.daysUntil')}`;
 
                 return (
-                  <div
-                    key={day.format('YYYY-MM-DD')}
-                    onClick={() => handleDateClick(day)}
-                    style={{
-                      minHeight: 80,
-                      padding: '4px 6px',
-                      borderRadius: 6,
-                      border: isToday ? '2px solid #1677ff' : '1px solid #f0f0f0',
-                      background: !isCurrentMonth ? '#fafafa' : hasEvents ? '#f6ffed' : '#fff',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s',
-                      opacity: isCurrentMonth ? 1 : 0.45,
-                    }}
-                  >
-                    {/* Day number */}
-                    <div style={{
-                      fontSize: 13,
-                      fontWeight: isToday ? 700 : 400,
-                      color: isToday ? '#1677ff' : day.day() === 0 || day.day() === 6 ? '#ff4d4f' : '#333',
-                      marginBottom: 2,
-                    }}>
-                      {day.date()}
+                  <div key={ev.sub.id} className="py-3 border-b border-border/50 last:border-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="font-semibold text-sm">{ev.sub.name}</span>
+                      <Badge
+                        variant={daysUntil < 0 ? 'destructive' : 'outline'}
+                        className={cn(
+                          'text-xs',
+                          daysUntil === 0 && 'bg-amber-100 text-amber-700 border-amber-200',
+                          daysUntil > 0 && daysUntil <= 3 && 'bg-orange-100 text-orange-700 border-orange-200',
+                          daysUntil > 3 && 'bg-green-100 text-green-700 border-green-200',
+                        )}
+                      >
+                        {statusText}
+                      </Badge>
                     </div>
-
-                    {/* Event badges */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {events.slice(0, 3).map((ev) => {
-                        const daysUntil = ev.date.diff(today, 'day');
-                        const color = daysUntil < 0 ? '#ff4d4f' : daysUntil === 0 ? '#faad14' : daysUntil <= 3 ? '#fa8c16' : '#52c41a';
-                        return (
-                          <Tooltip
-                            key={ev.sub.id}
-                            title={`${ev.sub.name} · ${getCurrencySymbol(ev.sub.currency)}${ev.sub.amount.toFixed(2)} · ${getCycleLabel(ev.sub.cycle, locale)}`}
-                          >
-                            <div style={{
-                              fontSize: 11,
-                              lineHeight: '16px',
-                              padding: '0 4px',
-                              borderRadius: 3,
-                              background: color,
-                              color: '#fff',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}>
-                              {ev.sub.name}
-                            </div>
-                          </Tooltip>
-                        );
-                      })}
-                      {events.length > 3 && (
-                        <Text style={{ fontSize: 10, color: '#999' }}>+{events.length - 3}</Text>
+                    <div className="space-y-0.5 text-sm text-muted-foreground">
+                      <p>{t('calendar.amount')}: <span className="font-medium text-foreground">{getCurrencySymbol(ev.sub.currency)}{ev.sub.amount.toFixed(2)}</span></p>
+                      <p>{t('calendar.cycle')}: {getCycleLabel(ev.sub.cycle, locale)}</p>
+                      {ev.sub.category && (
+                        <Badge variant="outline" className="mt-1 text-xs">{ev.sub.category}</Badge>
                       )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Date detail modal */}
-      <Modal
-        title={
-          <Space>
-            <CalendarOutlined />
-            <span>{selectedDate?.format(locale === 'zh' ? 'YYYY年M月D日' : 'MMMM D, YYYY')}</span>
-            {selectedEvents.length > 0 && (
-              <Tag color="blue">{selectedEvents.length} {t('calendar.renewal')}</Tag>
-            )}
-          </Space>
-        }
-        open={modalOpen}
-        onCancel={() => setModalOpen(false)}
-        footer={null}
-        width={480}
-      >
-        {selectedEvents.length > 0 ? (
-          <div>
-            {selectedEvents.map((ev) => {
-              const daysUntil = ev.date.diff(today, 'day');
-              const statusText = daysUntil < 0
-                ? t('calendar.overdue')
-                : daysUntil === 0
-                  ? t('calendar.dueToday')
-                  : `${daysUntil} ${t('calendar.daysUntil')}`;
-              const statusColor = daysUntil < 0 ? 'red' : daysUntil === 0 ? 'orange' : daysUntil <= 3 ? 'gold' : 'green';
-
-              return (
-                <div key={ev.sub.id} style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <div style={{ marginBottom: 4 }}>
-                    <Space>
-                      <Text strong>{ev.sub.name}</Text>
-                      <Tag color={statusColor}>{statusText}</Tag>
-                    </Space>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <Text type="secondary">
-                      {t('calendar.amount')}: <Text strong>{getCurrencySymbol(ev.sub.currency)}{ev.sub.amount.toFixed(2)}</Text>
-                    </Text>
-                    <Text type="secondary">
-                      {t('calendar.cycle')}: {getCycleLabel(ev.sub.cycle, locale)}
-                    </Text>
-                    {ev.sub.category && <Tag>{ev.sub.category}</Tag>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '24px 0' }}>
-            <Text type="secondary">{t('calendar.noEvents')}</Text>
-          </div>
-        )}
-      </Modal>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">{t('calendar.noEvents')}</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

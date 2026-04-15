@@ -1,12 +1,25 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import {
-  Modal, Form, Input, InputNumber, Select, DatePicker, Switch, Radio, Checkbox, TimePicker, Space,
-} from 'antd';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+import { Loader2 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { currencies } from '@/lib/currency';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 interface SubscriptionFormProps {
   open: boolean;
@@ -19,32 +32,53 @@ const cycleOptions = ['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'ONE_TIME', 'C
 const categoryOptions = ['development', 'design', 'productivity', 'entertainment', 'cloud', 'communication', 'education', 'other'];
 const paymentMethodOptions = ['alipay', 'wechat', 'credit_card', 'debit_card', 'paypal', 'apple_pay', 'google_pay', 'bank_transfer', 'crypto'];
 
-function calcNextRenewal(startDate: Dayjs, cycle: string, customDays?: number): Dayjs {
+function calcNextRenewal(startDate: string, cycle: string, customDays?: number): string {
+  const d = dayjs(startDate);
   switch (cycle) {
-    case 'WEEKLY': return startDate.add(1, 'week');
-    case 'MONTHLY': return startDate.add(1, 'month');
-    case 'QUARTERLY': return startDate.add(3, 'month');
-    case 'YEARLY': return startDate.add(1, 'year');
-    case 'ONE_TIME': return startDate; // No renewal for one-time
-    case 'CUSTOM': return startDate.add(customDays || 30, 'day');
-    default: return startDate.add(1, 'month');
+    case 'WEEKLY': return d.add(1, 'week').format('YYYY-MM-DD');
+    case 'MONTHLY': return d.add(1, 'month').format('YYYY-MM-DD');
+    case 'QUARTERLY': return d.add(3, 'month').format('YYYY-MM-DD');
+    case 'YEARLY': return d.add(1, 'year').format('YYYY-MM-DD');
+    case 'ONE_TIME': return d.format('YYYY-MM-DD');
+    case 'CUSTOM': return d.add(customDays || 30, 'day').format('YYYY-MM-DD');
+    default: return d.add(1, 'month').format('YYYY-MM-DD');
   }
 }
 
+const defaultForm = {
+  name: '',
+  amount: '',
+  currency: 'USD',
+  cycle: 'MONTHLY',
+  customCycleDays: '30',
+  startDate: dayjs().format('YYYY-MM-DD'),
+  nextRenewalDate: dayjs().add(1, 'month').format('YYYY-MM-DD'),
+  category: '',
+  paymentMethod: '',
+  url: '',
+  description: '',
+  notes: '',
+  isActive: true,
+  notifyEnabled: true,
+  notifyDaysBefore: [1] as number[],
+  notifyTime: '09:00',
+};
+
 export default function SubscriptionForm({ open, onClose, onSubmit, initialValues }: SubscriptionFormProps) {
-  const [form] = Form.useForm();
   const { t } = useI18n();
   const [loading, setLoading] = useState(false);
-  const [cycle, setCycle] = useState('MONTHLY');
+  const [form, setForm] = useState({ ...defaultForm });
   const [customMethods, setCustomMethods] = useState<Array<{ id: string; name: string }>>([]);
 
-  const updateNextRenewal = (newCycle?: string, newStart?: Dayjs, newCustomDays?: number) => {
-    const c = newCycle ?? form.getFieldValue('cycle') ?? 'MONTHLY';
-    const s = newStart ?? form.getFieldValue('startDate');
-    const d = newCustomDays ?? form.getFieldValue('customCycleDays');
-    if (s) {
-      form.setFieldsValue({ nextRenewalDate: calcNextRenewal(s, c, d) });
-    }
+  const updateField = <K extends keyof typeof defaultForm>(key: K, value: (typeof defaultForm)[K]) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateNextRenewal = (startDate?: string, cycle?: string, customDays?: string) => {
+    const s = startDate ?? form.startDate;
+    const c = cycle ?? form.cycle;
+    const d = parseInt(customDays ?? form.customCycleDays) || 30;
+    setForm(prev => ({ ...prev, nextRenewalDate: calcNextRenewal(s, c, d) }));
   };
 
   useEffect(() => {
@@ -59,77 +93,65 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
 
   useEffect(() => {
     if (open && initialValues) {
-      form.setFieldsValue({
-        ...initialValues,
-        startDate: initialValues.startDate ? dayjs(initialValues.startDate as string) : dayjs(),
-        nextRenewalDate: initialValues.nextRenewalDate ? dayjs(initialValues.nextRenewalDate as string) : dayjs().add(1, 'month'),
-        notifyDaysBefore: initialValues.notifyDaysBefore || [1],
-        notifyTime: initialValues.notifyTime ? dayjs(initialValues.notifyTime as string, 'HH:mm') : dayjs('09:00', 'HH:mm'),
-        paymentMethod: initialValues.paymentMethod || undefined,
-      });
-      setCycle((initialValues.cycle as string) || 'MONTHLY');
-    } else if (open) {
-      form.resetFields();
-      const now = dayjs();
-      form.setFieldsValue({
-        currency: 'USD',
-        cycle: 'MONTHLY',
-        isActive: true,
-        startDate: now,
-        nextRenewalDate: calcNextRenewal(now, 'MONTHLY'),
-        notifyDaysBefore: [1],
-        notifyTime: dayjs('09:00', 'HH:mm'),
+      setForm({
+        name: (initialValues.name as string) || '',
+        amount: String(initialValues.amount || ''),
+        currency: (initialValues.currency as string) || 'USD',
+        cycle: (initialValues.cycle as string) || 'MONTHLY',
+        customCycleDays: String(initialValues.customCycleDays || '30'),
+        startDate: initialValues.startDate ? dayjs(initialValues.startDate as string).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+        nextRenewalDate: initialValues.nextRenewalDate ? dayjs(initialValues.nextRenewalDate as string).format('YYYY-MM-DD') : dayjs().add(1, 'month').format('YYYY-MM-DD'),
+        category: (initialValues.category as string) || '',
+        paymentMethod: (initialValues.paymentMethod as string) || '',
+        url: (initialValues.url as string) || '',
+        description: (initialValues.description as string) || '',
+        notes: (initialValues.notes as string) || '',
+        isActive: initialValues.isActive !== false,
         notifyEnabled: true,
+        notifyDaysBefore: [1],
+        notifyTime: '09:00',
       });
-      setCycle('MONTHLY');
+    } else if (open) {
+      setForm({ ...defaultForm, startDate: dayjs().format('YYYY-MM-DD'), nextRenewalDate: dayjs().add(1, 'month').format('YYYY-MM-DD') });
     }
-  }, [open, initialValues, form]);
+  }, [open, initialValues]);
 
   const handleCycleChange = (newCycle: string) => {
-    setCycle(newCycle);
-    updateNextRenewal(newCycle);
+    updateField('cycle', newCycle);
+    const nr = calcNextRenewal(form.startDate, newCycle, parseInt(form.customCycleDays) || 30);
+    setForm(prev => ({ ...prev, cycle: newCycle, nextRenewalDate: nr }));
   };
 
-  const handleStartDateChange = (date: Dayjs | null) => {
-    if (date) updateNextRenewal(undefined, date);
-  };
-
-  const handleCustomDaysChange = (days: number | null) => {
-    if (days) updateNextRenewal(undefined, undefined, days);
+  const handleStartDateChange = (date: string) => {
+    updateField('startDate', date);
+    updateNextRenewal(date);
   };
 
   const handleSubmit = async () => {
+    if (!form.name || !form.amount) return;
+    setLoading(true);
     try {
-      const values = await form.validateFields();
-      setLoading(true);
-
-      const payload = {
-        ...values,
-        paymentMethod: values.paymentMethod || null,
-        startDate: (values.startDate as Dayjs).toISOString(),
-        nextRenewalDate: (values.nextRenewalDate as Dayjs).toISOString(),
-        notifications: values.notifyEnabled
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        amount: parseFloat(form.amount),
+        currency: form.currency,
+        cycle: form.cycle,
+        customCycleDays: form.cycle === 'CUSTOM' ? parseInt(form.customCycleDays) : null,
+        startDate: dayjs(form.startDate).toISOString(),
+        nextRenewalDate: dayjs(form.nextRenewalDate).toISOString(),
+        category: form.category || null,
+        paymentMethod: form.paymentMethod || null,
+        url: form.url || null,
+        description: form.description || null,
+        notes: form.notes || null,
+        isActive: form.isActive,
+        notifications: form.notifyEnabled
           ? [
-              {
-                type: 'EMAIL',
-                enabled: true,
-                daysBefore: values.notifyDaysBefore || [1],
-                notifyTime: (values.notifyTime as Dayjs).format('HH:mm'),
-              },
-              {
-                type: 'DINGTALK',
-                enabled: true,
-                daysBefore: values.notifyDaysBefore || [1],
-                notifyTime: (values.notifyTime as Dayjs).format('HH:mm'),
-              },
+              { type: 'EMAIL', enabled: true, daysBefore: form.notifyDaysBefore, notifyTime: form.notifyTime },
+              { type: 'DINGTALK', enabled: true, daysBefore: form.notifyDaysBefore, notifyTime: form.notifyTime },
             ]
           : [],
       };
-
-      delete payload.notifyDaysBefore;
-      delete payload.notifyTime;
-      delete payload.notifyEnabled;
-
       await onSubmit(payload);
       onClose();
     } catch {
@@ -139,131 +161,253 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
     }
   };
 
+  const toggleDaysBefore = (day: number) => {
+    setForm(prev => {
+      const current = prev.notifyDaysBefore;
+      return {
+        ...prev,
+        notifyDaysBefore: current.includes(day) ? current.filter(d => d !== day) : [...current, day],
+      };
+    });
+  };
+
   return (
-    <Modal
-      title={initialValues ? t('subscription.editTitle') : t('subscription.addNew')}
-      open={open}
-      onOk={handleSubmit}
-      onCancel={onClose}
-      confirmLoading={loading}
-      width={600}
-      okText={t('common.save')}
-      cancelText={t('common.cancel')}
-    >
-      <Form form={form} layout="vertical" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: 8 }}>
-        <Form.Item name="name" label={t('subscription.name')} rules={[{ required: true }]}>
-          <Input placeholder="e.g. GitHub Copilot" />
-        </Form.Item>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="glass-card max-w-xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{initialValues ? t('subscription.editTitle') : t('subscription.addNew')}</DialogTitle>
+        </DialogHeader>
 
-        <Space style={{ display: 'flex' }} align="start">
-          <Form.Item name="amount" label={t('subscription.amount')} rules={[{ required: true }]} style={{ width: 200 }}>
-            <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="currency" label={t('subscription.currency')} rules={[{ required: true }]} style={{ width: 200 }}>
-            <Select
-              showSearch
-              optionFilterProp="label"
-              options={currencies.map((c) => ({
-                value: c.code,
-                label: `${c.symbol} ${c.code} - ${c.nameZh}`,
-              }))}
+        <div className="space-y-4">
+          {/* Name */}
+          <div className="space-y-1.5">
+            <Label>{t('subscription.name')} *</Label>
+            <Input
+              value={form.name}
+              onChange={(e) => updateField('name', e.target.value)}
+              placeholder="e.g. GitHub Copilot"
+              required
             />
-          </Form.Item>
-        </Space>
+          </div>
 
-        <Space style={{ display: 'flex' }} align="start">
-          <Form.Item name="cycle" label={t('subscription.cycle')} rules={[{ required: true }]} style={{ width: 200 }}>
-            <Radio.Group onChange={(e) => handleCycleChange(e.target.value)}>
+          {/* Amount + Currency */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>{t('subscription.amount')} *</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.amount}
+                onChange={(e) => updateField('amount', e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t('subscription.currency')}</Label>
+              <Select value={form.currency} onValueChange={(v) => updateField('currency', v ?? 'USD')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {currencies.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.symbol} {c.code} - {c.nameZh}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Cycle */}
+          <div className="space-y-1.5">
+            <Label>{t('subscription.cycle')}</Label>
+            <div className="flex flex-wrap gap-1.5">
               {cycleOptions.map((c) => (
-                <Radio.Button key={c} value={c}>
+                <Badge
+                  key={c}
+                  variant={form.cycle === c ? 'default' : 'outline'}
+                  className={cn(
+                    'cursor-pointer transition-all px-3 py-1.5 text-xs',
+                    form.cycle === c && 'bg-primary text-primary-foreground',
+                  )}
+                  onClick={() => handleCycleChange(c)}
+                >
                   {t(`subscription.cycles.${c}`)}
-                </Radio.Button>
+                </Badge>
               ))}
-            </Radio.Group>
-          </Form.Item>
-        </Space>
+            </div>
+          </div>
 
-        {cycle === 'CUSTOM' && (
-          <Form.Item name="customCycleDays" label={t('subscription.customDays')} rules={[{ required: true }]}>
-            <InputNumber min={1} max={3650} style={{ width: 200 }} onChange={handleCustomDaysChange} />
-          </Form.Item>
-        )}
-
-        <Space style={{ display: 'flex' }} align="start">
-          <Form.Item name="startDate" label={t('subscription.startDate')} rules={[{ required: true }]} style={{ width: 200 }}>
-            <DatePicker style={{ width: '100%' }} onChange={handleStartDateChange} />
-          </Form.Item>
-          {cycle !== 'ONE_TIME' && (
-            <Form.Item name="nextRenewalDate" label={t('subscription.nextRenewal')} rules={[{ required: cycle !== 'ONE_TIME' }]} style={{ width: 200 }}>
-              <DatePicker style={{ width: '100%' }} />
-            </Form.Item>
+          {/* Custom Days */}
+          {form.cycle === 'CUSTOM' && (
+            <div className="space-y-1.5">
+              <Label>{t('subscription.customDays')}</Label>
+              <Input
+                type="number"
+                min="1"
+                max="3650"
+                value={form.customCycleDays}
+                onChange={(e) => {
+                  updateField('customCycleDays', e.target.value);
+                  updateNextRenewal(undefined, undefined, e.target.value);
+                }}
+                className="w-40"
+              />
+            </div>
           )}
-        </Space>
 
-        <Form.Item name="category" label={t('subscription.category')}>
-          <Select
-            allowClear
-            options={categoryOptions.map((c) => ({
-              value: c,
-              label: t(`subscription.categories.${c}`),
-            }))}
-          />
-        </Form.Item>
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>{t('subscription.startDate')}</Label>
+              <Input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+              />
+            </div>
+            {form.cycle !== 'ONE_TIME' && (
+              <div className="space-y-1.5">
+                <Label>{t('subscription.nextRenewal')}</Label>
+                <Input
+                  type="date"
+                  value={form.nextRenewalDate}
+                  onChange={(e) => updateField('nextRenewalDate', e.target.value)}
+                />
+              </div>
+            )}
+          </div>
 
-        <Form.Item name="paymentMethod" label={t('subscription.paymentMethod')}>
-          <Select
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            options={[
-              ...paymentMethodOptions.map((p) => ({
-                value: p,
-                label: t(`subscription.paymentMethods.${p}`),
-              })),
-              ...customMethods.map((m) => ({
-                value: m.name,
-                label: m.name,
-              })),
-            ]}
-          />
-        </Form.Item>
+          {/* Category */}
+          <div className="space-y-1.5">
+            <Label>{t('subscription.category')}</Label>
+            <Select value={form.category || '_none'} onValueChange={(v) => updateField('category', (v ?? '') === '_none' ? '' : (v ?? ''))}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('common.select')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">-</SelectItem>
+                {categoryOptions.map((c) => (
+                  <SelectItem key={c} value={c}>{t(`subscription.categories.${c}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <Form.Item name="url" label={t('subscription.url')}>
-          <Input placeholder="https://..." />
-        </Form.Item>
+          {/* Payment Method */}
+          <div className="space-y-1.5">
+            <Label>{t('subscription.paymentMethod')}</Label>
+            <Select value={form.paymentMethod || '_none'} onValueChange={(v) => updateField('paymentMethod', (v ?? '') === '_none' ? '' : (v ?? ''))}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('common.select')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">-</SelectItem>
+                {paymentMethodOptions.map((p) => (
+                  <SelectItem key={p} value={p}>{t(`subscription.paymentMethods.${p}`)}</SelectItem>
+                ))}
+                {customMethods.map((m) => (
+                  <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <Form.Item name="description" label={t('subscription.description')}>
-          <Input.TextArea rows={2} />
-        </Form.Item>
-
-        <Form.Item name="notes" label={t('subscription.notes')}>
-          <Input.TextArea rows={2} />
-        </Form.Item>
-
-        <Form.Item name="isActive" label={t('subscription.active')} valuePropName="checked">
-          <Switch />
-        </Form.Item>
-
-        <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 16, marginTop: 8 }}>
-          <Form.Item name="notifyEnabled" label={t('notification.title')} valuePropName="checked">
-            <Switch />
-          </Form.Item>
-
-          <Form.Item name="notifyDaysBefore" label={t('notification.daysBefore')}>
-            <Checkbox.Group
-              options={[
-                { label: t('notification.today'), value: 0 },
-                { label: t('notification.oneDayBefore'), value: 1 },
-                { label: t('notification.twoDaysBefore'), value: 2 },
-              ]}
+          {/* URL */}
+          <div className="space-y-1.5">
+            <Label>{t('subscription.url')}</Label>
+            <Input
+              value={form.url}
+              onChange={(e) => updateField('url', e.target.value)}
+              placeholder="https://..."
             />
-          </Form.Item>
+          </div>
 
-          <Form.Item name="notifyTime" label={t('notification.notifyTime')}>
-            <TimePicker format="HH:mm" style={{ width: 200 }} />
-          </Form.Item>
+          {/* Description */}
+          <div className="space-y-1.5">
+            <Label>{t('subscription.description')}</Label>
+            <Textarea
+              value={form.description}
+              onChange={(e) => updateField('description', e.target.value)}
+              rows={2}
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <Label>{t('subscription.notes')}</Label>
+            <Textarea
+              value={form.notes}
+              onChange={(e) => updateField('notes', e.target.value)}
+              rows={2}
+            />
+          </div>
+
+          {/* Active */}
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={form.isActive}
+              onCheckedChange={(v) => updateField('isActive', v)}
+            />
+            <Label>{t('subscription.active')}</Label>
+          </div>
+
+          <Separator />
+
+          {/* Notification Settings */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={form.notifyEnabled}
+                onCheckedChange={(v) => updateField('notifyEnabled', v)}
+              />
+              <Label>{t('notification.title')}</Label>
+            </div>
+
+            {form.notifyEnabled && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{t('notification.daysBefore')}</Label>
+                  <div className="flex items-center gap-4">
+                    {[
+                      { label: t('notification.today'), value: 0 },
+                      { label: t('notification.oneDayBefore'), value: 1 },
+                      { label: t('notification.twoDaysBefore'), value: 2 },
+                    ].map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={form.notifyDaysBefore.includes(opt.value)}
+                          onCheckedChange={() => toggleDaysBefore(opt.value)}
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{t('notification.notifyTime')}</Label>
+                  <Input
+                    type="time"
+                    value={form.notifyTime}
+                    onChange={(e) => updateField('notifyTime', e.target.value)}
+                    className="w-40"
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </Form>
-    </Modal>
+
+        <DialogFooter className="gap-2 pt-4">
+          <Button variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button onClick={handleSubmit} disabled={loading} className="bg-primary">
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('common.save')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

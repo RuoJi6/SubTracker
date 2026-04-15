@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Row, Col, Empty, Spin } from 'antd';
+import { PackageOpen, Loader2 } from 'lucide-react';
 import SubscriptionCard from './SubscriptionCard';
 import { useI18n } from '@/hooks/useI18n';
 
@@ -32,20 +32,27 @@ export default function SubscriptionList({ subscriptions, loading, onEdit, onDel
   const { t } = useI18n();
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>;
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   if (subscriptions.length === 0) {
-    return <Empty description={t('dashboard.noSubscriptions')} />;
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <PackageOpen className="mb-3 size-12 opacity-40" />
+        <p className="text-sm">{t('dashboard.noSubscriptions')}</p>
+      </div>
+    );
   }
 
   return (
-    <Row gutter={[16, 16]}>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {subscriptions.map((sub) => (
-        <Col key={sub.id} xs={24} sm={12} lg={8} xl={6}>
-          <SubscriptionCard subscription={sub} onEdit={onEdit} onDelete={onDelete} />
-        </Col>
+        <SubscriptionCard key={sub.id} subscription={sub} onEdit={onEdit} onDelete={onDelete} />
       ))}
-    </Row>
+    </div>
   );
 }

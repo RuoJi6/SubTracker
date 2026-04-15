@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { App } from 'antd';
+import { toast } from 'sonner';
 
 interface Subscription {
   id: string;
@@ -16,6 +16,7 @@ interface Subscription {
   nextRenewalDate: string;
   url?: string | null;
   category?: string | null;
+  paymentMethod?: string | null;
   isActive: boolean;
   exchangeRateAtPurchase?: number | null;
   notes?: string | null;
@@ -31,7 +32,6 @@ interface Subscription {
 export function useSubscriptions() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(false);
-  const { message } = App.useApp();
 
   const fetchSubscriptions = useCallback(async (params?: { active?: boolean; category?: string }) => {
     setLoading(true);
@@ -45,14 +45,14 @@ export function useSubscriptions() {
       if (data.success) {
         setSubscriptions(data.data);
       } else {
-        message.error(data.error || 'Failed to fetch subscriptions');
+        toast.error(data.error || 'Failed to fetch subscriptions');
       }
     } catch {
-      message.error('Network error');
+      toast.error('Network error');
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, []);
 
   const createSubscription = useCallback(async (body: Record<string, unknown>) => {
     try {
@@ -63,17 +63,17 @@ export function useSubscriptions() {
       });
       const data = await res.json();
       if (data.success) {
-        message.success('订阅创建成功');
+        toast.success('订阅创建成功');
         return data.data;
       } else {
-        message.error(data.error || 'Failed');
+        toast.error(data.error || 'Failed');
         return null;
       }
     } catch {
-      message.error('Network error');
+      toast.error('Network error');
       return null;
     }
-  }, [message]);
+  }, []);
 
   const updateSubscription = useCallback(async (id: string, body: Record<string, unknown>) => {
     try {
@@ -84,35 +84,35 @@ export function useSubscriptions() {
       });
       const data = await res.json();
       if (data.success) {
-        message.success('订阅更新成功');
+        toast.success('订阅更新成功');
         return data.data;
       } else {
-        message.error(data.error || 'Failed');
+        toast.error(data.error || 'Failed');
         return null;
       }
     } catch {
-      message.error('Network error');
+      toast.error('Network error');
       return null;
     }
-  }, [message]);
+  }, []);
 
   const deleteSubscription = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/subscriptions/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
-        message.success('订阅已删除');
+        toast.success('订阅已删除');
         setSubscriptions((prev) => prev.filter((s) => s.id !== id));
         return true;
       } else {
-        message.error(data.error || 'Failed');
+        toast.error(data.error || 'Failed');
         return false;
       }
     } catch {
-      message.error('Network error');
+      toast.error('Network error');
       return false;
     }
-  }, [message]);
+  }, []);
 
   return {
     subscriptions,

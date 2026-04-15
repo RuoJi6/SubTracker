@@ -1,15 +1,18 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Button, Input, Select, Space } from 'antd';
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { Plus, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useI18n } from '@/hooks/useI18n';
 import SubscriptionList from '@/components/subscription/SubscriptionList';
 import SubscriptionForm from '@/components/subscription/SubscriptionForm';
+import { Button } from '@/components/ui/button';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 export default function SubscriptionsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { subscriptions, loading, fetchSubscriptions, createSubscription, updateSubscription, deleteSubscription } = useSubscriptions();
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -27,8 +30,11 @@ export default function SubscriptionsPage() {
 
   const handleDelete = useCallback(async (id: string) => {
     const ok = await deleteSubscription(id);
-    if (ok) fetchSubscriptions();
-  }, [deleteSubscription, fetchSubscriptions]);
+    if (ok) {
+      toast.success(locale === 'zh' ? '已删除' : 'Deleted');
+      fetchSubscriptions();
+    }
+  }, [deleteSubscription, fetchSubscriptions, locale]);
 
   const handleSubmit = useCallback(async (values: Record<string, unknown>) => {
     if (editingId) {
@@ -69,29 +75,39 @@ export default function SubscriptionsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Space>
-          <Input
-            prefix={<SearchOutlined />}
-            placeholder={t('common.search')}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 200 }}
-            allowClear
-          />
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <InputGroup className="w-[200px]">
+            <InputGroupAddon>
+              <Search className="size-4" />
+            </InputGroupAddon>
+            <InputGroupInput
+              placeholder={t('common.search')}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+          </InputGroup>
+
           <Select
-            placeholder={t('subscription.category')}
-            value={filterCategory}
-            onChange={setFilterCategory}
-            allowClear
-            style={{ width: 150 }}
-            options={categoryOptions.map((c) => ({
-              value: c,
-              label: t(`subscription.categories.${c}`),
-            }))}
-          />
-        </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
+            value={filterCategory ?? ''}
+            onValueChange={(val) => setFilterCategory(val || undefined)}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder={t('subscription.category')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">{locale === 'zh' ? '全部分类' : 'All categories'}</SelectItem>
+              {categoryOptions.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {t(`subscription.categories.${c}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button onClick={() => setFormOpen(true)}>
+          <Plus className="size-4" />
           {t('subscription.addNew')}
         </Button>
       </div>

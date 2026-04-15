@@ -1,15 +1,29 @@
 'use client';
 
-import React from 'react';
-import { Card, Tag, Typography, Space, Button, Popconfirm, Progress, Tooltip } from 'antd';
-import { EditOutlined, DeleteOutlined, LinkOutlined, ClockCircleOutlined, WalletOutlined, ShoppingOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
 import dayjs from 'dayjs';
+import { Pencil, Trash2, ExternalLink, Clock, Wallet, ShoppingBag } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { getCurrencySymbol, getCycleLabel } from '@/lib/currency';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/progress';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 
 const PRESET_PAYMENT_METHODS = ['alipay', 'wechat', 'credit_card', 'debit_card', 'paypal', 'apple_pay', 'google_pay', 'bank_transfer', 'crypto'];
-
-const { Text, Title } = Typography;
 
 interface SubscriptionCardProps {
   subscription: {
@@ -31,13 +45,36 @@ interface SubscriptionCardProps {
   onDelete: (id: string) => void;
 }
 
+const urgencyClasses = {
+  red: 'border-l-red-500 text-red-500',
+  orange: 'border-l-orange-400 text-orange-400',
+  blue: 'border-l-blue-500 text-blue-500',
+  green: 'border-l-green-500 text-green-500',
+  purple: 'border-l-purple-600 text-purple-600',
+} as const;
+
+function getUrgencyKey(cycle: string, daysUntil: number) {
+  if (cycle === 'ONE_TIME') return 'purple';
+  if (daysUntil <= 0) return 'red';
+  if (daysUntil <= 3) return 'orange';
+  if (daysUntil <= 7) return 'blue';
+  return 'green';
+}
+
+const progressColorMap: Record<string, string> = {
+  red: 'bg-red-500',
+  orange: 'bg-orange-400',
+  blue: 'bg-blue-500',
+  green: 'bg-green-500',
+};
+
 export default function SubscriptionCard({ subscription, onEdit, onDelete }: SubscriptionCardProps) {
   const { t, locale } = useI18n();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const now = dayjs();
   const nextRenewal = dayjs(subscription.nextRenewalDate);
   const daysUntil = nextRenewal.diff(now, 'day');
 
-  // Calculate cycle duration in days for progress bar
   const getCycleDays = () => {
     switch (subscription.cycle) {
       case 'WEEKLY': return 7;
@@ -52,97 +89,155 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete }: Sub
   const elapsed = cycleDays - Math.max(daysUntil, 0);
   const progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / cycleDays) * 100)));
 
-  const progressColor = daysUntil <= 0 ? '#ff4d4f' : daysUntil <= 3 ? '#faad14' : daysUntil <= 7 ? '#1890ff' : '#52c41a';
-
-  const urgencyColor = subscription.cycle === 'ONE_TIME' ? '#722ed1' : daysUntil <= 0 ? '#ff4d4f' : daysUntil <= 3 ? '#faad14' : daysUntil <= 7 ? '#1890ff' : '#52c41a';
   const isOneTime = subscription.cycle === 'ONE_TIME';
+  const urgencyKey = getUrgencyKey(subscription.cycle, daysUntil);
+  const progressKey = daysUntil <= 0 ? 'red' : daysUntil <= 3 ? 'orange' : daysUntil <= 7 ? 'blue' : 'green';
 
   return (
     <Card
-      hoverable
-      style={{
-        borderRadius: 12,
-        opacity: subscription.isActive ? 1 : 0.6,
-        borderLeft: `4px solid ${urgencyColor}`,
-      }}
-      actions={[
-        <Button key="edit" type="text" icon={<EditOutlined />} onClick={() => onEdit(subscription.id)} />,
-        <Popconfirm
-          key="delete"
-          title={t('subscription.deleteConfirm')}
-          onConfirm={() => onDelete(subscription.id)}
-          okText={t('common.confirm')}
-          cancelText={t('common.cancel')}
-        >
-          <Button type="text" danger icon={<DeleteOutlined />} />
-        </Popconfirm>,
-        subscription.url ? (
-          <Button key="link" type="text" icon={<LinkOutlined />} onClick={() => window.open(subscription.url!, '_blank')} />
-        ) : (
-          <Button key="link" type="text" icon={<LinkOutlined />} disabled />
-        ),
-      ]}
+      className={cn(
+        'glass-card rounded-xl border-l-4 transition-shadow hover:shadow-lg',
+        urgencyClasses[urgencyKey].split(' ')[0],
+        !subscription.isActive && 'opacity-60',
+      )}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <Title level={5} style={{ margin: 0 }}>{subscription.name}</Title>
-          {subscription.description && (
-            <Text type="secondary" style={{ fontSize: 12 }}>{subscription.description}</Text>
+      <CardContent className="pt-4">
+        {/* Header: name + amount */}
+        <div className="flex items-start justify-between">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-base font-semibold text-foreground">{subscription.name}</h3>
+            {subscription.description && (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">{subscription.description}</p>
+            )}
+          </div>
+          <div className="ml-3 text-right shrink-0">
+            <p className={cn('text-lg font-bold', urgencyClasses[urgencyKey].split(' ').slice(1).join(' '))}>
+              {getCurrencySymbol(subscription.currency)}{subscription.amount.toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {getCycleLabel(subscription.cycle, locale)}
+            </p>
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {isOneTime ? (
+            <Badge variant="secondary" className="gap-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+              <ShoppingBag className="size-3" />
+              {locale === 'zh' ? '买断' : 'One-time'}
+            </Badge>
+          ) : (
+            <Badge
+              variant="secondary"
+              className={cn(
+                'gap-1',
+                urgencyKey === 'red' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+                urgencyKey === 'orange' && 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+                urgencyKey === 'blue' && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                urgencyKey === 'green' && 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+              )}
+            >
+              <Clock className="size-3" />
+              {daysUntil <= 0
+                ? (locale === 'zh' ? '已到期' : 'Expired')
+                : daysUntil === 1
+                  ? (locale === 'zh' ? '明天续费' : 'Tomorrow')
+                  : (locale === 'zh' ? `${daysUntil}天后续费` : `${daysUntil} days left`)}
+            </Badge>
+          )}
+          {isOneTime ? (
+            <Badge variant="outline">
+              {locale === 'zh' ? '购买于' : 'Purchased'} {dayjs(subscription.startDate).format('YYYY-MM-DD')}
+            </Badge>
+          ) : (
+            <Badge variant="outline">
+              {dayjs(subscription.nextRenewalDate).format('YYYY-MM-DD')}
+            </Badge>
+          )}
+          {subscription.category && (
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+              {t(`subscription.categories.${subscription.category}`)}
+            </Badge>
+          )}
+          {subscription.paymentMethod && (
+            <Badge variant="secondary" className="gap-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+              <Wallet className="size-3" />
+              {PRESET_PAYMENT_METHODS.includes(subscription.paymentMethod)
+                ? t(`subscription.paymentMethods.${subscription.paymentMethod}`)
+                : subscription.paymentMethod}
+            </Badge>
+          )}
+          {!subscription.isActive && (
+            <Badge variant="outline" className="text-muted-foreground">{t('common.inactive')}</Badge>
           )}
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <Title level={4} style={{ margin: 0, color: urgencyColor }}>
-            {getCurrencySymbol(subscription.currency)}{subscription.amount.toFixed(2)}
-          </Title>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {getCycleLabel(subscription.cycle, locale)}
-          </Text>
-        </div>
-      </div>
 
-      <Space style={{ marginTop: 12 }} wrap>
-        {isOneTime ? (
-          <Tag icon={<ShoppingOutlined />} color="purple">
-            {locale === 'zh' ? '买断' : 'One-time'}
-          </Tag>
-        ) : (
-          <Tag icon={<ClockCircleOutlined />} color={urgencyColor}>
-            {daysUntil <= 0
-              ? (locale === 'zh' ? '已到期' : 'Expired')
-              : daysUntil === 1
-                ? (locale === 'zh' ? '明天续费' : 'Tomorrow')
-                : (locale === 'zh' ? `${daysUntil}天后续费` : `${daysUntil} days left`)}
-          </Tag>
+        {/* Progress bar (only for recurring) */}
+        {!isOneTime && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger className="mt-3 block w-full cursor-default">
+                <Progress value={progressPercent} className="gap-1">
+                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                    {elapsed}/{cycleDays}d
+                  </span>
+                  <ProgressTrack className="h-1.5">
+                    <ProgressIndicator className={cn(progressColorMap[progressKey])} />
+                  </ProgressTrack>
+                </Progress>
+              </TooltipTrigger>
+              <TooltipContent>
+                {locale === 'zh' ? `已过 ${elapsed}/${cycleDays} 天` : `${elapsed}/${cycleDays} days elapsed`}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
-        {isOneTime ? (
-          <Tag>{locale === 'zh' ? '购买于' : 'Purchased'} {dayjs(subscription.startDate).format('YYYY-MM-DD')}</Tag>
-        ) : (
-          <Tag>{dayjs(subscription.nextRenewalDate).format('YYYY-MM-DD')}</Tag>
-        )}
-        {subscription.category && (
-          <Tag color="blue">{t(`subscription.categories.${subscription.category}`)}</Tag>
-        )}
-        {subscription.paymentMethod && (
-          <Tag icon={<WalletOutlined />} color="purple">
-            {PRESET_PAYMENT_METHODS.includes(subscription.paymentMethod)
-              ? t(`subscription.paymentMethods.${subscription.paymentMethod}`)
-              : subscription.paymentMethod}
-          </Tag>
-        )}
-        {!subscription.isActive && <Tag color="default">{t('common.inactive')}</Tag>}
-      </Space>
+      </CardContent>
 
-      {!isOneTime && (
-        <Tooltip title={locale === 'zh' ? `已过 ${elapsed}/${cycleDays} 天` : `${elapsed}/${cycleDays} days elapsed`}>
-          <Progress
-            percent={progressPercent}
-            size="small"
-            strokeColor={progressColor}
-            style={{ marginTop: 12, marginBottom: -8 }}
-            format={() => `${elapsed}/${cycleDays}d`}
-          />
-        </Tooltip>
-      )}
+      {/* Action buttons */}
+      <CardFooter className="justify-around border-t px-2 py-1.5">
+        <Button variant="ghost" size="icon-sm" onClick={() => onEdit(subscription.id)}>
+          <Pencil className="size-4" />
+        </Button>
+
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogTrigger render={
+            <Button variant="ghost" size="icon-sm" className="text-destructive hover:text-destructive" />
+          }>
+            <Trash2 className="size-4" />
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('subscription.deleteConfirm')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {locale === 'zh' ? '此操作不可撤销。' : 'This action cannot be undone.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  onDelete(subscription.id);
+                  setDeleteOpen(false);
+                }}
+              >
+                {t('common.confirm')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          disabled={!subscription.url}
+          onClick={() => subscription.url && window.open(subscription.url, '_blank')}
+        >
+          <ExternalLink className="size-4" />
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
