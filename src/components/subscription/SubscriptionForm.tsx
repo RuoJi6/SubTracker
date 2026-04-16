@@ -280,21 +280,6 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
             </div>
           </div>
 
-          {/* End Date (CUSTOM = fixed-period subscription) */}
-          {form.cycle === 'CUSTOM' && (
-            <div className="space-y-1.5">
-              <Label>{locale === 'zh' ? '结束日期' : 'End Date'}</Label>
-              <DatePicker
-                value={form.endDate}
-                onChange={(v) => {
-                  setForm(prev => ({ ...prev, endDate: v, nextRenewalDate: v }));
-                }}
-                locale={locale}
-                placeholder={locale === 'zh' ? '选择结束日期' : 'Select end date'}
-              />
-            </div>
-          )}
-
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -306,7 +291,19 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
                 placeholder={t('subscription.startDate')}
               />
             </div>
-            {form.cycle !== 'ONE_TIME' && form.cycle !== 'CUSTOM' && (
+            {form.cycle === 'CUSTOM' ? (
+              <div className="space-y-1.5">
+                <Label>{locale === 'zh' ? '结束日期' : 'End Date'}</Label>
+                <DatePicker
+                  value={form.endDate}
+                  onChange={(v) => {
+                    setForm(prev => ({ ...prev, endDate: v, nextRenewalDate: v }));
+                  }}
+                  locale={locale}
+                  placeholder={locale === 'zh' ? '选择结束日期' : 'Select end date'}
+                />
+              </div>
+            ) : form.cycle !== 'ONE_TIME' ? (
               <div className="space-y-1.5">
                 <Label>{t('subscription.nextRenewal')}</Label>
                 <DatePicker
@@ -316,7 +313,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
                   placeholder={t('subscription.nextRenewal')}
                 />
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Category */}
