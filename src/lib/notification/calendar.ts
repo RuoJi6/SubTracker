@@ -55,6 +55,9 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
       cycle: getCycleLabel(sub.cycle, lang),
       category: sub.category || '-',
       paymentMethod: sub.paymentMethod || '-',
+      autoRenew: sub.autoRenew
+        ? (lang === 'zh' ? '自动续费' : 'Auto-renew')
+        : (lang === 'zh' ? '手动续费' : 'Manual'),
     };
 
     const baseSummary = renderTemplate(titleTemplate, templateData);

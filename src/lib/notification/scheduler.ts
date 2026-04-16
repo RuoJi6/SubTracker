@@ -64,6 +64,9 @@ export async function checkAndSendNotifications(): Promise<{
           cycle: getCycleLabel(sub.cycle, lang),
           category: sub.category || '-',
           paymentMethod: sub.paymentMethod || '-',
+          autoRenew: sub.autoRenew
+            ? (lang === 'zh' ? '自动续费' : 'Auto-renew')
+            : (lang === 'zh' ? '手动续费' : 'Manual'),
         };
 
         try {

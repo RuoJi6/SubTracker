@@ -1,6 +1,6 @@
 // Placeholder keys available for notification templates
 export const TEMPLATE_PLACEHOLDERS = [
-  'name', 'amount', 'renewalDate', 'daysUntil', 'urgency', 'cycle', 'category', 'paymentMethod',
+  'name', 'amount', 'renewalDate', 'daysUntil', 'urgency', 'cycle', 'category', 'paymentMethod', 'autoRenew',
 ] as const;
 
 export type TemplatePlaceholder = typeof TEMPLATE_PLACEHOLDERS[number];
@@ -14,6 +14,7 @@ export interface TemplateData {
   cycle: string;
   category: string;
   paymentMethod: string;
+  autoRenew?: string;
 }
 
 export const SAMPLE_DATA: TemplateData = {
@@ -25,6 +26,7 @@ export const SAMPLE_DATA: TemplateData = {
   cycle: '月付',
   category: '开发工具',
   paymentMethod: '信用卡',
+  autoRenew: '自动续费',
 };
 
 export const DEFAULT_DINGTALK_TEMPLATE = `### 📢 订阅续费提醒
@@ -63,11 +65,12 @@ export const DEFAULT_EMAIL_TEMPLATE = `<div style="max-width: 480px; margin: 0 a
 
 export const DEFAULT_CALENDAR_TITLE = `🔔 {name} 续费`;
 
-export const DEFAULT_CALENDAR_DESC = `订阅续费提醒
-金额: {amount}
-周期: {cycle}
-分类: {category}
-支付方式: {paymentMethod}`;
+export const DEFAULT_CALENDAR_DESC = `📋 订阅续费提醒
+💰 金额: {amount}
+🔄 周期: {cycle}
+📌 续费方式: {autoRenew}
+📂 分类: {category}
+💳 支付方式: {paymentMethod}`;
 
 export function renderTemplate(template: string, data: TemplateData): string {
   let result = template;
