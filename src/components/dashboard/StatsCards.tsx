@@ -10,11 +10,13 @@ import dayjs from 'dayjs';
 import {
   DollarSign, TrendingUp, ShoppingBag, AppWindow,
   Clock, AlertTriangle, ExternalLink, Loader2, History,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { getCurrencySymbol, getCycleLabel } from '@/lib/currency';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -29,6 +31,7 @@ interface Subscription {
   nextRenewalDate: string;
   startDate: string;
   isActive: boolean;
+  autoRenew?: boolean;
   category?: string | null;
   paymentMethod?: string | null;
   url?: string | null;
@@ -99,6 +102,7 @@ export default function StatsCards() {
   const [detailSub, setDetailSub] = useState<Subscription | null>(null);
   const [showActiveList, setShowActiveList] = useState(false);
   const [showTotalSpent, setShowTotalSpent] = useState(false);
+  const [barOffset, setBarOffset] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -219,7 +223,8 @@ export default function StatsCards() {
   const barData = useMemo(() => {
     const now = dayjs();
     const months: { month: string; amount: number }[] = [];
-    for (let i = -2; i < 4; i++) {
+    // Show 6 months window starting from barOffset
+    for (let i = barOffset - 2; i < barOffset + 4; i++) {
       const monthStart = now.add(i, 'month').startOf('month');
       const monthEnd = monthStart.endOf('month');
       let total = 0;
@@ -228,34 +233,46 @@ export default function StatsCards() {
         if (sub.currency !== displayCurrency && sub.exchangeRateAtPurchase) {
           converted *= sub.exchangeRateAtPurchase;
         }
-        const renewalDate = dayjs(sub.nextRenewalDate);
-        switch (sub.cycle) {
-          case 'WEEKLY':
-            total += converted * 4.33;
-            break;
-          case 'MONTHLY':
-            total += converted;
-            break;
-          case 'QUARTERLY':
-            // Check if this quarter includes the month
-            for (let q = -4; q <= 4; q++) {
-              const d = renewalDate.add(q * 3, 'month');
-              if (d.isSame(monthStart, 'month')) { total += converted; break; }
+
+        if (sub.autoRenew) {
+          // Auto-renew: always count as recurring expense
+          const renewalDate = dayjs(sub.nextRenewalDate);
+          switch (sub.cycle) {
+            case 'WEEKLY':
+              total += converted * 4.33;
+              break;
+            case 'MONTHLY':
+              total += converted;
+              break;
+            case 'QUARTERLY':
+              for (let q = -8; q <= 8; q++) {
+                const d = renewalDate.add(q * 3, 'month');
+                if (d.isSame(monthStart, 'month')) { total += converted; break; }
+              }
+              break;
+            case 'YEARLY':
+              for (let y = -5; y <= 5; y++) {
+                const d = renewalDate.add(y, 'year');
+                if (d.isSame(monthStart, 'month')) { total += converted; break; }
+              }
+              break;
+            case 'CUSTOM': {
+              const cycleDays = sub.customCycleDays || 30;
+              total += converted * (30 / cycleDays);
+              break;
             }
-            break;
-          case 'YEARLY':
-            for (let y = -2; y <= 2; y++) {
-              const d = renewalDate.add(y, 'year');
-              if (d.isSame(monthStart, 'month')) { total += converted; break; }
-            }
-            break;
-          case 'CUSTOM': {
-            const cycleDays = sub.customCycleDays || 30;
-            total += converted * (30 / cycleDays);
-            break;
+            default:
+              total += converted;
           }
-          default:
+        } else {
+          // Manual: only count if nextRenewalDate falls in this month (already paid or due)
+          const renewal = dayjs(sub.nextRenewalDate);
+          if (
+            (renewal.isAfter(monthStart) || renewal.isSame(monthStart, 'day')) &&
+            (renewal.isBefore(monthEnd) || renewal.isSame(monthEnd, 'day'))
+          ) {
             total += converted;
+          }
         }
       }
       months.push({
@@ -264,7 +281,7 @@ export default function StatsCards() {
       });
     }
     return months;
-  }, [recurring, displayCurrency, locale]);
+  }, [recurring, displayCurrency, locale, barOffset]);
 
   if (loading) {
     return (
@@ -396,7 +413,22 @@ export default function StatsCards() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card className="glass-card">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">{t('dashboard.expenseChart')}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">{t('dashboard.expenseChart')}</CardTitle>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setBarOffset((o) => o - 3)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  {barOffset !== 0 && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setBarOffset(0)}>
+                      {locale === 'zh' ? '当前' : 'Now'}
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setBarOffset((o) => o + 3)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={280}>
