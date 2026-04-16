@@ -98,6 +98,7 @@ export default function StatsCards() {
   const [breakdownType, setBreakdownType] = useState<'monthly' | 'yearly' | 'onetime' | null>(null);
   const [detailSub, setDetailSub] = useState<Subscription | null>(null);
   const [showActiveList, setShowActiveList] = useState(false);
+  const [showTotalSpent, setShowTotalSpent] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -146,9 +147,12 @@ export default function StatsCards() {
   const oneTimeTotal = oneTimeData.reduce((sum, d) => sum + d.converted, 0);
 
   // Total historical spent: sum of all payments made from startDate to today
-  const totalSpent = useMemo(() => {
+  const totalSpentData = useMemo(() => {
     const now = dayjs();
-    let total = 0;
+    const items: {
+      key: string; name: string; originalAmount: number; originalCurrency: string;
+      cycle: string; payments: number; totalSpent: number; startDate: string;
+    }[] = [];
 
     for (const sub of subscriptions) {
       let amount = sub.amount;
@@ -157,11 +161,14 @@ export default function StatsCards() {
       }
 
       if (sub.cycle === 'ONE_TIME') {
-        total += amount;
+        items.push({
+          key: sub.id, name: sub.name, originalAmount: sub.amount,
+          originalCurrency: sub.currency, cycle: sub.cycle,
+          payments: 1, totalSpent: amount, startDate: sub.startDate,
+        });
         continue;
       }
 
-      // Count how many payments have been made from startDate to now
       const start = dayjs(sub.startDate);
       const daysSinceStart = now.diff(start, 'day');
       if (daysSinceStart < 0) continue;
@@ -177,10 +184,16 @@ export default function StatsCards() {
       }
 
       const payments = Math.floor(daysSinceStart / cycleDays) + 1;
-      total += amount * payments;
+      items.push({
+        key: sub.id, name: sub.name, originalAmount: sub.amount,
+        originalCurrency: sub.currency, cycle: sub.cycle,
+        payments, totalSpent: amount * payments, startDate: sub.startDate,
+      });
     }
-    return total;
+    return items.sort((a, b) => b.totalSpent - a.totalSpent);
   }, [subscriptions, displayCurrency]);
+
+  const totalSpent = totalSpentData.reduce((sum, d) => sum + d.totalSpent, 0);
 
   const upcoming = recurring
     .filter((s) => {
@@ -270,6 +283,7 @@ export default function StatsCards() {
           title={t('dashboard.totalSpent')}
           value={`${symbol}${totalSpent.toFixed(2)}`}
           accent="green"
+          onClick={() => setShowTotalSpent(true)}
         />
         <StatCard
           icon={<DollarSign className="h-5 w-5 text-primary" />}
@@ -640,6 +654,40 @@ export default function StatsCards() {
                 </div>
               );
             })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Total Spent Breakdown Dialog */}
+      <Dialog open={showTotalSpent} onOpenChange={setShowTotalSpent}>
+        <DialogContent className="max-w-2xl glass-card max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('dashboard.totalSpent')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-0">
+            <div className="grid grid-cols-[2fr_1.2fr_1fr_0.8fr_1.2fr] text-xs font-medium text-muted-foreground px-2 py-2 border-b border-border">
+              <span>{t('subscription.name')}</span>
+              <span>{locale === 'zh' ? '单次金额' : 'Per Payment'}</span>
+              <span>{t('subscription.cycle')}</span>
+              <span className="text-center">{locale === 'zh' ? '次数' : 'Times'}</span>
+              <span className="text-right">{locale === 'zh' ? '累计花费' : 'Total'}</span>
+            </div>
+            {totalSpentData.map((d) => (
+              <div key={d.key} className="grid grid-cols-[2fr_1.2fr_1fr_0.8fr_1.2fr] items-center text-sm py-2.5 px-2 border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors">
+                <span className="font-medium truncate pr-2">{d.name}</span>
+                <span className="text-muted-foreground">{getCurrencySymbol(d.originalCurrency)}{d.originalAmount.toFixed(2)}</span>
+                <span>
+                  <Badge variant="secondary" className="text-xs">{getCycleLabel(d.cycle, locale)}</Badge>
+                </span>
+                <span className="text-center tabular-nums">{d.payments}</span>
+                <span className="text-right font-semibold text-primary tabular-nums">{symbol}{d.totalSpent.toFixed(2)}</span>
+              </div>
+            ))}
+            <Separator className="my-2" />
+            <div className="flex items-center justify-between px-2 pt-1 font-bold">
+              <span>{locale === 'zh' ? '合计' : 'Total'}</span>
+              <span className="text-primary text-lg">{symbol}{totalSpent.toFixed(2)}</span>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
