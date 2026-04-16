@@ -1,4 +1,4 @@
-import icalGenerator, { ICalEventRepeatingFreq } from 'ical-generator';
+import icalGenerator, { ICalCalendarMethod, ICalEventRepeatingFreq } from 'ical-generator';
 import { Subscription } from '@prisma/client';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -30,6 +30,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
     name: 'SubTracker Subscriptions',
     timezone: tz,
     prodId: { company: 'SubTracker', product: 'Subscription Reminders' },
+    method: ICalCalendarMethod.PUBLISH,
     ttl: 60 * 15, // suggest 15-minute refresh to calendar clients
   });
 
