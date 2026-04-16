@@ -93,8 +93,8 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete, onRen
     }
   };
   const cycleDays = getCycleDaysLocal();
-  const elapsed = cycleDays - Math.max(daysUntil, 0);
-  const progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / cycleDays) * 100)));
+  const elapsed = Math.max(0, cycleDays - Math.max(daysUntil, 0));
+  const progressPercent = cycleDays > 0 ? Math.min(100, Math.round((elapsed / cycleDays) * 100)) : 0;
 
   const isOneTime = subscription.cycle === 'ONE_TIME';
   const urgencyKey = getUrgencyKey(subscription.cycle, daysUntil);
