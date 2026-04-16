@@ -35,6 +35,7 @@
   "dashboard": {
     "totalMonthly": "每月总花费",
     "totalYearly": "每年总花费",
+    "totalSpent": "累计总花费",
     "totalOneTime": "买断总花费",
     "activeCount": "活跃订阅",
     "upcomingRenewals": "即将续费",
@@ -153,6 +154,12 @@
     "emailTo": "收件人邮箱",
     "saved": "设置已保存",
     "calendarTokenTip": "此链接包含私有令牌，请勿分享给他人。重新生成令牌后旧链接将失效。",
+    "calendarAlarmDays": "日历提醒天数",
+    "calendarAlarmOnDay": "当天",
+    "calendarAlarmDaysBefore": "天前",
+    "calendarAlarmDaysHelp": "选择在事件发生前多少天触发日历提醒（可多选）",
+    "calendarRefreshHours": "日历刷新频率",
+    "hours": "小时",
     "regenerateToken": "重新生成令牌",
     "regenerateConfirm": "重新生成后，旧的日历订阅链接将失效，需要重新在 Apple 日历中添加。确认继续？",
     "tokenRegenerated": "令牌已重新生成"

@@ -35,6 +35,7 @@
   "dashboard": {
     "totalMonthly": "Monthly Total",
     "totalYearly": "Yearly Total",
+    "totalSpent": "Total Spent",
     "totalOneTime": "One-time Total",
     "activeCount": "Active Subscriptions",
     "upcomingRenewals": "Upcoming Renewals",
@@ -153,6 +154,12 @@
     "emailTo": "To Email",
     "saved": "Settings saved",
     "calendarTokenTip": "This URL contains a private token. Do not share it. Regenerating the token will invalidate the old URL.",
+    "calendarAlarmDays": "Calendar Alert Days",
+    "calendarAlarmOnDay": "On the day",
+    "calendarAlarmDaysBefore": "days before",
+    "calendarAlarmDaysHelp": "Choose how many days before the event to trigger a calendar alarm (multi-select)",
+    "calendarRefreshHours": "Calendar Refresh Interval",
+    "hours": "hours",
     "regenerateToken": "Regenerate Token",
     "regenerateConfirm": "After regeneration, the old calendar subscription URL will stop working. You will need to re-add it in Apple Calendar. Continue?",
     "tokenRegenerated": "Token regenerated"

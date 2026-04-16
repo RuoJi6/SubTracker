@@ -400,7 +400,7 @@ export default function CalendarView() {
                       <p>{t('calendar.amount')}: <span className="font-medium text-foreground">{getCurrencySymbol(ev.sub.currency)}{ev.sub.amount.toFixed(2)}</span></p>
                       <p>{t('calendar.cycle')}: {getCycleLabel(ev.sub.cycle, locale)}</p>
                       {ev.sub.category && (
-                        <Badge variant="outline" className="mt-1 text-xs">{ev.sub.category}</Badge>
+                        <Badge variant="outline" className="mt-1 text-xs">{t(`subscription.categories.${ev.sub.category}`)}</Badge>
                       )}
                     </div>
                   </div>

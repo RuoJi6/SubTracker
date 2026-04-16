@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
       calendarTitle: settings?.calendarTitle,
       calendarDesc: settings?.calendarDesc,
       language: settings?.language,
+      refreshIntervalHours: settings?.calendarRefreshHours ?? 6,
+      alarmDays: settings?.calendarAlarmDays ? JSON.parse(settings.calendarAlarmDays) : [0, 1],
     });
 
     return new NextResponse(ical, {

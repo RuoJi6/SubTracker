@@ -8,6 +8,7 @@ interface CalendarOptions {
   calendarDesc?: string | null;
   language?: string;
   refreshIntervalHours?: number;
+  alarmDays?: number[];
 }
 
 export function generateICalendar(subscriptions: Subscription[], options?: CalendarOptions): string {
@@ -21,6 +22,11 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
   const titleTemplate = options?.calendarTitle || DEFAULT_CALENDAR_TITLE;
   const descTemplate = options?.calendarDesc || DEFAULT_CALENDAR_DESC;
   const lang = options?.language || 'zh';
+  const alarmDays = options?.alarmDays ?? [0, 1];
+  const alarms = alarmDays.map((d) => ({
+    type: ICalAlarmType.display,
+    trigger: d * 86400,
+  }));
 
   for (const sub of subscriptions) {
     if (!sub.isActive) continue;
@@ -50,9 +56,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
         allDay: true,
         summary,
         description,
-        alarms: [
-          { type: ICalAlarmType.display, trigger: 0 },
-        ],
+        alarms: [{ type: ICalAlarmType.display, trigger: 0 }],
       });
       continue;
     }
@@ -74,10 +78,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
         summary,
         description,
         repeating,
-        alarms: [
-          { type: ICalAlarmType.display, trigger: 86400 },
-          { type: ICalAlarmType.display, trigger: 0 },
-        ],
+        alarms,
       });
     } else {
       // Manual payment: single event at nextRenewalDate only
@@ -87,10 +88,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
         allDay: true,
         summary,
         description,
-        alarms: [
-          { type: ICalAlarmType.display, trigger: 86400 },
-          { type: ICalAlarmType.display, trigger: 0 },
-        ],
+        alarms,
       });
     }
   }

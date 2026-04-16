@@ -9,7 +9,7 @@ import {
 import dayjs from 'dayjs';
 import {
   DollarSign, TrendingUp, ShoppingBag, AppWindow,
-  Clock, AlertTriangle, ExternalLink, Loader2,
+  Clock, AlertTriangle, ExternalLink, Loader2, History,
 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { getCurrencySymbol, getCycleLabel } from '@/lib/currency';
@@ -145,6 +145,43 @@ export default function StatsCards() {
   const yearlyTotal = monthlyTotal * 12;
   const oneTimeTotal = oneTimeData.reduce((sum, d) => sum + d.converted, 0);
 
+  // Total historical spent: sum of all payments made from startDate to today
+  const totalSpent = useMemo(() => {
+    const now = dayjs();
+    let total = 0;
+
+    for (const sub of subscriptions) {
+      let amount = sub.amount;
+      if (sub.currency !== displayCurrency && sub.exchangeRateAtPurchase) {
+        amount *= sub.exchangeRateAtPurchase;
+      }
+
+      if (sub.cycle === 'ONE_TIME') {
+        total += amount;
+        continue;
+      }
+
+      // Count how many payments have been made from startDate to now
+      const start = dayjs(sub.startDate);
+      const daysSinceStart = now.diff(start, 'day');
+      if (daysSinceStart < 0) continue;
+
+      let cycleDays: number;
+      switch (sub.cycle) {
+        case 'WEEKLY': cycleDays = 7; break;
+        case 'MONTHLY': cycleDays = 30; break;
+        case 'QUARTERLY': cycleDays = 90; break;
+        case 'YEARLY': cycleDays = 365; break;
+        case 'CUSTOM': cycleDays = sub.customCycleDays || 30; break;
+        default: cycleDays = 30;
+      }
+
+      const payments = Math.floor(daysSinceStart / cycleDays) + 1;
+      total += amount * payments;
+    }
+    return total;
+  }, [subscriptions, displayCurrency]);
+
   const upcoming = recurring
     .filter((s) => {
       const days = dayjs(s.nextRenewalDate).diff(dayjs(), 'day');
@@ -227,7 +264,13 @@ export default function StatsCards() {
   return (
     <div className="space-y-6">
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <StatCard
+          icon={<History className="h-5 w-5 text-emerald-500" />}
+          title={t('dashboard.totalSpent')}
+          value={`${symbol}${totalSpent.toFixed(2)}`}
+          accent="green"
+        />
         <StatCard
           icon={<DollarSign className="h-5 w-5 text-primary" />}
           title={t('dashboard.totalMonthly')}

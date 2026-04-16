@@ -37,6 +37,8 @@ interface FormValues {
   calendarTitle?: string;
   calendarDesc?: string;
   calendarToken?: string;
+  calendarAlarmDays?: string;
+  calendarRefreshHours?: number;
 }
 
 export default function SettingsPage() {
@@ -501,7 +503,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Calendar URL */}
+      {/* Calendar URL & Settings */}
       <Card className="glass-card mb-4">
         <CardContent>
           <h5 className="text-base font-medium mb-2">{t('notification.calendar')}</h5>
@@ -509,6 +511,58 @@ export default function SettingsPage() {
             <Info className="size-4 shrink-0" />
             <span>{t('notification.calendarHelp')}</span>
           </div>
+
+          {/* Calendar notification settings */}
+          <div className="mb-4 space-y-4">
+            <div className="space-y-2">
+              <Label>{t('settings.calendarAlarmDays')}</Label>
+              <div className="flex flex-wrap gap-2">
+                {[0, 1, 2, 3, 5, 7, 14].map((d) => {
+                  const currentDays: number[] = (() => {
+                    try { return JSON.parse(formValues.calendarAlarmDays || '[0,1]'); }
+                    catch { return [0, 1]; }
+                  })();
+                  const isSelected = currentDays.includes(d);
+                  return (
+                    <Badge
+                      key={d}
+                      variant={isSelected ? 'default' : 'outline'}
+                      className="cursor-pointer px-3 py-1 text-sm"
+                      onClick={() => {
+                        const next = isSelected
+                          ? currentDays.filter((v: number) => v !== d)
+                          : [...currentDays, d].sort((a, b) => a - b);
+                        updateField('calendarAlarmDays', JSON.stringify(next));
+                      }}
+                    >
+                      {d === 0 ? (t('settings.calendarAlarmOnDay')) : `${d} ${t('settings.calendarAlarmDaysBefore')}`}
+                    </Badge>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">{t('settings.calendarAlarmDaysHelp')}</p>
+            </div>
+            <div className="space-y-2 max-w-[200px]">
+              <Label>{t('settings.calendarRefreshHours')}</Label>
+              <Select
+                value={String(formValues.calendarRefreshHours ?? 6)}
+                onValueChange={(val) => updateField('calendarRefreshHours', Number(val ?? '6'))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>{formValues.calendarRefreshHours ?? 6} {t('settings.hours')}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 {t('settings.hours')}</SelectItem>
+                  <SelectItem value="3">3 {t('settings.hours')}</SelectItem>
+                  <SelectItem value="6">6 {t('settings.hours')}</SelectItem>
+                  <SelectItem value="12">12 {t('settings.hours')}</SelectItem>
+                  <SelectItem value="24">24 {t('settings.hours')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Separator className="my-4" />
           <p className="mb-3 text-xs text-muted-foreground">{t('settings.calendarTokenTip')}</p>
           <div className="space-y-3">
             <InputGroup>

@@ -60,6 +60,8 @@ model GlobalSettings {
   emailTemplate     String? // Custom email HTML template with placeholders
   calendarTitle     String? // Custom calendar event title template
   calendarDesc      String? // Custom calendar event description template
+  calendarAlarmDays String  @default("[0,1]") // JSON array of days before event to trigger alarm
+  calendarRefreshHours Int  @default(6) // Calendar refresh interval in hours
   timezone          String  @default("Asia/Shanghai")
 }
 
