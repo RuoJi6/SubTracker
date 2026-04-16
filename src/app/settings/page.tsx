@@ -56,7 +56,8 @@ export default function SettingsPage() {
   const calendarUrl = typeof window !== 'undefined' && calendarToken
     ? `${window.location.origin}/api/calendar?token=${calendarToken}`
     : '';
-  const webcalUrl = calendarUrl ? calendarUrl.replace(/^https?:\/\//, 'webcal://') : '';
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  const webcalUrl = calendarUrl && isHttps ? calendarUrl.replace(/^https:\/\//, 'webcal://') : '';
 
   const updateField = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setFormValues((prev) => ({ ...prev, [key]: value }));
@@ -558,13 +559,20 @@ export default function SettingsPage() {
                 </InputGroupButton>
               </InputGroupAddon>
             </InputGroup>
-            <div className="flex gap-2 flex-wrap">
-              {webcalUrl && (
+            <div className="flex gap-2 flex-wrap items-center">
+              {webcalUrl ? (
                 <a href={webcalUrl} className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors">
                   <CalendarDays className="size-4" />
                   {formValues.language === 'zh' ? '订阅到 Apple 日历' : 'Subscribe in Apple Calendar'}
                 </a>
-              )}
+              ) : calendarUrl ? (
+                <p className="text-xs text-muted-foreground">
+                  <CalendarDays className="inline size-3.5 mr-1" />
+                  {formValues.language === 'zh'
+                    ? '复制上方 URL → Apple 日历 → 文件 → 新建日历订阅 → 粘贴'
+                    : 'Copy URL above → Apple Calendar → File → New Calendar Subscription → Paste'}
+                </p>
+              ) : null}
               <AlertDialog>
               <AlertDialogTrigger render={
                 <Button variant="destructive" size="sm" disabled={regenerating}>

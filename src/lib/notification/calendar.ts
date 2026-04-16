@@ -30,6 +30,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
     name: 'SubTracker Subscriptions',
     timezone: tz,
     prodId: { company: 'SubTracker', product: 'Subscription Reminders' },
+    ttl: 60 * 15, // suggest 15-minute refresh to calendar clients
   });
 
   const titleTemplate = options?.calendarTitle || DEFAULT_CALENDAR_TITLE;
