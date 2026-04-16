@@ -1,7 +1,7 @@
 import { prisma } from '../prisma';
 import { sendDingTalkMessage, buildRenewalMessage } from './dingtalk';
 import { sendEmail, buildRenewalEmailHtml } from './email';
-import { renderTemplate, DEFAULT_DINGTALK_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, TemplateData } from './template';
+import { renderTemplate, DEFAULT_DINGTALK_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, TemplateData, translateCategory, translatePaymentMethod } from './template';
 import { formatAmount, getCycleLabel } from '../currency';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -62,8 +62,8 @@ export async function checkAndSendNotifications(): Promise<{
           daysUntil,
           urgency,
           cycle: getCycleLabel(sub.cycle, lang),
-          category: sub.category || '-',
-          paymentMethod: sub.paymentMethod || '-',
+          category: translateCategory(sub.category || 'other', lang),
+          paymentMethod: translatePaymentMethod(sub.paymentMethod || '', lang) || '-',
           autoRenew: sub.autoRenew
             ? (lang === 'zh' ? '自动续费' : 'Auto-renew')
             : (lang === 'zh' ? '手动续费' : 'Manual'),

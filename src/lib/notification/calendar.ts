@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { getCycleDays, formatAmount, getCycleLabel } from '../currency';
-import { renderTemplate, DEFAULT_CALENDAR_TITLE, DEFAULT_CALENDAR_DESC, TemplateData } from './template';
+import { renderTemplate, DEFAULT_CALENDAR_TITLE, DEFAULT_CALENDAR_DESC, TemplateData, translateCategory, translatePaymentMethod } from './template';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -53,8 +53,8 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
       daysUntil: 0,
       urgency: lang === 'zh' ? '📅 续费日' : '📅 Renewal Day',
       cycle: getCycleLabel(sub.cycle, lang),
-      category: sub.category || '-',
-      paymentMethod: sub.paymentMethod || '-',
+      category: translateCategory(sub.category || 'other', lang),
+      paymentMethod: translatePaymentMethod(sub.paymentMethod || '', lang) || '-',
       autoRenew: sub.autoRenew
         ? (lang === 'zh' ? '自动续费' : 'Auto-renew')
         : (lang === 'zh' ? '手动续费' : 'Manual'),

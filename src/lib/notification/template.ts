@@ -75,7 +75,28 @@ export const DEFAULT_CALENDAR_DESC = `📋 订阅续费提醒
 export function renderTemplate(template: string, data: TemplateData): string {
   let result = template;
   for (const key of TEMPLATE_PLACEHOLDERS) {
-    result = result.replaceAll(`{${key}}`, String(data[key]));
+    result = result.replaceAll(`{${key}}`, String(data[key] ?? ''));
   }
   return result;
+}
+
+// Server-side translation maps for categories and payment methods
+const categoryMap: Record<string, Record<string, string>> = {
+  zh: { development: '开发工具', design: '设计', productivity: '效率工具', entertainment: '娱乐', cloud: '云服务', communication: '通讯', education: '教育', other: '其他' },
+  en: { development: 'Development', design: 'Design', productivity: 'Productivity', entertainment: 'Entertainment', cloud: 'Cloud', communication: 'Communication', education: 'Education', other: 'Other' },
+};
+
+const paymentMethodMap: Record<string, Record<string, string>> = {
+  zh: { alipay: '支付宝', wechat: '微信支付', credit_card: '信用卡', debit_card: '借记卡', paypal: 'PayPal', apple_pay: 'Apple Pay', google_pay: 'Google Pay', bank_transfer: '银行转账', crypto: '加密货币' },
+  en: { alipay: 'Alipay', wechat: 'WeChat Pay', credit_card: 'Credit Card', debit_card: 'Debit Card', paypal: 'PayPal', apple_pay: 'Apple Pay', google_pay: 'Google Pay', bank_transfer: 'Bank Transfer', crypto: 'Cryptocurrency' },
+};
+
+/** Translate a category key to a display label */
+export function translateCategory(key: string, lang: string): string {
+  return categoryMap[lang]?.[key] ?? categoryMap['en']?.[key] ?? key;
+}
+
+/** Translate a payment method key to a display label */
+export function translatePaymentMethod(key: string, lang: string): string {
+  return paymentMethodMap[lang]?.[key] ?? paymentMethodMap['en']?.[key] ?? key;
 }
