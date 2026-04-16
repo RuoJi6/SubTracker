@@ -103,6 +103,7 @@ export default function StatsCards() {
   const [showActiveList, setShowActiveList] = useState(false);
   const [showTotalSpent, setShowTotalSpent] = useState(false);
   const [barOffset, setBarOffset] = useState(0);
+  const [selectedBarMonth, setSelectedBarMonth] = useState<BarMonth | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -220,64 +221,86 @@ export default function StatsCards() {
     .map(d => ({ name: d.name, value: Math.round(d.monthly * 100) / 100 }))
   , [breakdownData]);
 
+  interface BarMonthItem {
+    name: string; amount: number; originalAmount: number;
+    originalCurrency: string; cycle: string; type: 'auto' | 'manual';
+  }
+  interface BarMonth {
+    month: string; monthKey: string; amount: number; items: BarMonthItem[];
+  }
+
   const barData = useMemo(() => {
     const now = dayjs();
-    const months: { month: string; amount: number }[] = [];
-    // Show 6 months window starting from barOffset
+    const months: BarMonth[] = [];
     for (let i = barOffset - 2; i < barOffset + 4; i++) {
       const monthStart = now.add(i, 'month').startOf('month');
       const monthEnd = monthStart.endOf('month');
       let total = 0;
+      const items: BarMonthItem[] = [];
       for (const sub of recurring) {
         let converted = sub.amount;
         if (sub.currency !== displayCurrency && sub.exchangeRateAtPurchase) {
           converted *= sub.exchangeRateAtPurchase;
         }
 
+        let subAmount = 0;
         if (sub.autoRenew) {
-          // Auto-renew: always count as recurring expense
           const renewalDate = dayjs(sub.nextRenewalDate);
           switch (sub.cycle) {
             case 'WEEKLY':
-              total += converted * 4.33;
+              subAmount = converted * 4.33;
               break;
             case 'MONTHLY':
-              total += converted;
+              subAmount = converted;
               break;
             case 'QUARTERLY':
               for (let q = -8; q <= 8; q++) {
                 const d = renewalDate.add(q * 3, 'month');
-                if (d.isSame(monthStart, 'month')) { total += converted; break; }
+                if (d.isSame(monthStart, 'month')) { subAmount = converted; break; }
               }
               break;
             case 'YEARLY':
               for (let y = -5; y <= 5; y++) {
                 const d = renewalDate.add(y, 'year');
-                if (d.isSame(monthStart, 'month')) { total += converted; break; }
+                if (d.isSame(monthStart, 'month')) { subAmount = converted; break; }
               }
               break;
             case 'CUSTOM': {
               const cycleDays = sub.customCycleDays || 30;
-              total += converted * (30 / cycleDays);
+              subAmount = converted * (30 / cycleDays);
               break;
             }
             default:
-              total += converted;
+              subAmount = converted;
           }
         } else {
-          // Manual: only count if nextRenewalDate falls in this month (already paid or due)
           const renewal = dayjs(sub.nextRenewalDate);
           if (
             (renewal.isAfter(monthStart) || renewal.isSame(monthStart, 'day')) &&
             (renewal.isBefore(monthEnd) || renewal.isSame(monthEnd, 'day'))
           ) {
-            total += converted;
+            subAmount = converted;
           }
         }
+
+        if (subAmount > 0) {
+          total += subAmount;
+          items.push({
+            name: sub.name,
+            amount: Math.round(subAmount * 100) / 100,
+            originalAmount: sub.amount,
+            originalCurrency: sub.currency,
+            cycle: sub.cycle,
+            type: sub.autoRenew ? 'auto' : 'manual',
+          });
+        }
       }
+      items.sort((a, b) => b.amount - a.amount);
       months.push({
         month: monthStart.format(locale === 'zh' ? 'M月' : 'MMM'),
+        monthKey: monthStart.format('YYYY-MM'),
         amount: Math.round(total * 100) / 100,
+        items,
       });
     }
     return months;
@@ -452,8 +475,18 @@ export default function StatsCards() {
                     contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                     labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                   />
-                  <Bar dataKey="amount" fill="url(#barGradient)" activeBar={{ fill: 'url(#barGradientActive)' }} radius={[8, 8, 0, 0]} animationDuration={800}>
-                    <LabelList
+                  <Bar
+                    dataKey="amount"
+                    fill="url(#barGradient)"
+                    activeBar={{ fill: 'url(#barGradientActive)' }}
+                    radius={[8, 8, 0, 0]}
+                    animationDuration={800}
+                    cursor="pointer"
+                    onClick={(_data, index) => {
+                      const month = barData[index];
+                      if (month && month.items.length > 0) setSelectedBarMonth(month);
+                    }}
+                  >                    <LabelList
                       dataKey="amount"
                       position="top"
                       formatter={(v) => v != null ? `${symbol}${Number(v).toFixed(0)}` : ''}
@@ -721,6 +754,44 @@ export default function StatsCards() {
               <span className="text-primary text-lg">{symbol}{totalSpent.toFixed(2)}</span>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Monthly Expense Detail Dialog */}
+      <Dialog open={!!selectedBarMonth} onOpenChange={(open) => { if (!open) setSelectedBarMonth(null); }}>
+        <DialogContent className="max-w-lg glass-card max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedBarMonth?.month} {locale === 'zh' ? '消费明细' : 'Expense Details'}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedBarMonth && (
+            <div className="space-y-0">
+              <div className="grid grid-cols-[2fr_1.2fr_1fr_1.2fr] text-xs font-medium text-muted-foreground px-2 py-2 border-b border-border">
+                <span>{t('subscription.name')}</span>
+                <span>{locale === 'zh' ? '原始金额' : 'Original'}</span>
+                <span>{locale === 'zh' ? '类型' : 'Type'}</span>
+                <span className="text-right">{locale === 'zh' ? '折算金额' : 'Converted'}</span>
+              </div>
+              {selectedBarMonth.items.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-[2fr_1.2fr_1fr_1.2fr] items-center text-sm py-2.5 px-2 border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors">
+                  <span className="font-medium truncate pr-2">{item.name}</span>
+                  <span className="text-muted-foreground tabular-nums">{getCurrencySymbol(item.originalCurrency)}{item.originalAmount.toFixed(2)}</span>
+                  <span>
+                    <Badge variant={item.type === 'auto' ? 'default' : 'outline'} className="text-xs">
+                      {item.type === 'auto' ? (locale === 'zh' ? '自动' : 'Auto') : (locale === 'zh' ? '手动' : 'Manual')}
+                    </Badge>
+                  </span>
+                  <span className="text-right font-semibold text-primary tabular-nums">{symbol}{item.amount.toFixed(2)}</span>
+                </div>
+              ))}
+              <Separator className="my-2" />
+              <div className="flex items-center justify-between px-2 pt-1 font-bold">
+                <span>{locale === 'zh' ? '合计' : 'Total'}</span>
+                <span className="text-primary text-lg">{symbol}{selectedBarMonth.amount.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
