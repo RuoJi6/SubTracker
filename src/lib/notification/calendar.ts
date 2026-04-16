@@ -1,7 +1,13 @@
 import icalGenerator, { ICalEventRepeatingFreq } from 'ical-generator';
 import { Subscription } from '@prisma/client';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import { getCycleDays, formatAmount, getCycleLabel } from '../currency';
 import { renderTemplate, DEFAULT_CALENDAR_TITLE, DEFAULT_CALENDAR_DESC, TemplateData } from './template';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 interface CalendarOptions {
   calendarTitle?: string | null;
@@ -11,10 +17,19 @@ interface CalendarOptions {
   alarmDays?: number[];
 }
 
+/**
+ * Create a Date object at noon UTC for a given date string to avoid
+ * timezone boundary issues with all-day calendar events.
+ */
+function dateAtNoonUTC(dateStr: string): Date {
+  return new Date(`${dateStr}T12:00:00Z`);
+}
+
 export function generateICalendar(subscriptions: Subscription[], options?: CalendarOptions): string {
+  const tz = process.env.TZ || 'Asia/Shanghai';
   const calendar = icalGenerator({
     name: 'SubTracker Subscriptions',
-    timezone: process.env.TZ || 'Asia/Shanghai',
+    timezone: tz,
     prodId: { company: 'SubTracker', product: 'Subscription Reminders' },
     ttl: (options?.refreshIntervalHours ?? 6) * 3600,
   });
@@ -28,12 +43,13 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
     if (!sub.isActive) continue;
 
     const cycleDays = getCycleDays(sub.cycle, sub.customCycleDays ?? undefined);
-    const renewalDate = new Date(sub.nextRenewalDate);
+    // Extract date in the configured timezone to avoid UTC offset issues
+    const renewalDateStr = dayjs(sub.nextRenewalDate).tz(tz).format('YYYY-MM-DD');
 
     const templateData: TemplateData = {
       name: sub.name,
       amount: formatAmount(sub.amount, sub.currency),
-      renewalDate: renewalDate.toISOString().split('T')[0],
+      renewalDate: renewalDateStr,
       daysUntil: 0,
       urgency: lang === 'zh' ? '📅 续费日' : '📅 Renewal Day',
       cycle: getCycleLabel(sub.cycle, lang),
@@ -46,9 +62,10 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
 
     // ONE_TIME: single event on startDate
     if (sub.cycle === 'ONE_TIME') {
+      const startStr = dayjs(sub.startDate).tz(tz).format('YYYY-MM-DD');
       calendar.createEvent({
         id: `${sub.id}-onetime`,
-        start: new Date(sub.startDate),
+        start: dateAtNoonUTC(startStr),
         allDay: true,
         summary: baseSummary,
         description: baseDescription,
@@ -69,8 +86,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
 
     // Create a separate calendar event for each alarm day
     for (const daysBefore of alarmDays) {
-      const eventDate = new Date(renewalDate);
-      eventDate.setDate(eventDate.getDate() - daysBefore);
+      const eventDateStr = dayjs(renewalDateStr).subtract(daysBefore, 'day').format('YYYY-MM-DD');
 
       let summary: string;
       let description: string;
@@ -85,12 +101,12 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
         description = baseDescription;
       }
 
-      const eventId = `${sub.id}-d${daysBefore}-${eventDate.toISOString().split('T')[0]}`;
+      const eventId = `${sub.id}-d${daysBefore}-${eventDateStr}`;
 
       if (repeating) {
         calendar.createEvent({
           id: eventId,
-          start: eventDate,
+          start: dateAtNoonUTC(eventDateStr),
           allDay: true,
           summary,
           description,
@@ -99,7 +115,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
       } else {
         calendar.createEvent({
           id: eventId,
-          start: eventDate,
+          start: dateAtNoonUTC(eventDateStr),
           allDay: true,
           summary,
           description,

@@ -4,6 +4,11 @@ import { sendEmail, buildRenewalEmailHtml } from './email';
 import { renderTemplate, DEFAULT_DINGTALK_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, TemplateData } from './template';
 import { formatAmount, getCycleLabel } from '../currency';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export async function checkAndSendNotifications(): Promise<{
   checked: number;
@@ -17,7 +22,8 @@ export async function checkAndSendNotifications(): Promise<{
       where: { id: 'global' },
     });
 
-    const now = dayjs();
+    const tz = process.env.TZ || 'Asia/Shanghai';
+    const now = dayjs().tz(tz);
     const subscriptions = await prisma.subscription.findMany({
       where: { isActive: true },
       include: { notificationConfigs: true },
@@ -25,8 +31,11 @@ export async function checkAndSendNotifications(): Promise<{
 
     for (const sub of subscriptions) {
       result.checked++;
-      const renewalDate = dayjs(sub.nextRenewalDate);
-      const daysUntil = renewalDate.diff(now, 'day');
+      const renewalDate = dayjs(sub.nextRenewalDate).tz(tz);
+      // Compare using date strings to avoid timezone boundary issues
+      const todayStr = now.format('YYYY-MM-DD');
+      const renewalStr = renewalDate.format('YYYY-MM-DD');
+      const daysUntil = dayjs(renewalStr).diff(dayjs(todayStr), 'day');
 
       for (const config of sub.notificationConfigs) {
         if (!config.enabled) continue;
