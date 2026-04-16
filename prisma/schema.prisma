@@ -14,8 +14,9 @@ model Subscription {
   description             String?
   amount                  Float
   currency                String               @default("USD")
-  cycle                   String               @default("MONTHLY") // WEEKLY, MONTHLY, QUARTERLY, YEARLY, CUSTOM
+  cycle                   String               @default("MONTHLY") // WEEKLY, MONTHLY, QUARTERLY, YEARLY, ONE_TIME, CUSTOM
   customCycleDays         Int?
+  endDate                 DateTime?            // End date for CUSTOM (fixed-period) subscriptions
   paymentMethod           String?              // e.g. Alipay, WeChat, CreditCard, PayPal, or custom
   autoRenew               Boolean              @default(false) // true = auto subscription, false = manual payment
   startDate               DateTime

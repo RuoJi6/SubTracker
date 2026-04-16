@@ -34,6 +34,7 @@ interface SubscriptionCardProps {
     currency: string;
     cycle: string;
     customCycleDays?: number | null;
+    endDate?: string | null;
     autoRenew?: boolean;
     startDate: string;
     nextRenewalDate: string;
@@ -171,6 +172,10 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete, onRen
           {isOneTime ? (
             <Badge variant="outline">
               {locale === 'zh' ? '购买于' : 'Purchased'} {dayjs(subscription.startDate).format('YYYY-MM-DD')}
+            </Badge>
+          ) : subscription.cycle === 'CUSTOM' ? (
+            <Badge variant="outline">
+              {locale === 'zh' ? '到期' : 'Expires'} {dayjs(subscription.endDate || subscription.nextRenewalDate).format('YYYY-MM-DD')}
             </Badge>
           ) : (
             <Badge variant="outline">

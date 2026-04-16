@@ -79,7 +79,7 @@
       "QUARTERLY": "Quarterly",
       "YEARLY": "Yearly",
       "ONE_TIME": "One-time",
-      "CUSTOM": "Custom"
+      "CUSTOM": "Fixed Period"
     },
     "categories": {
       "development": "Development",

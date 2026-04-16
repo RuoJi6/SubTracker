@@ -76,6 +76,30 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
       continue;
     }
 
+    // CUSTOM (fixed-period): single event on endDate (expiry reminder)
+    if (sub.cycle === 'CUSTOM') {
+      const endStr = sub.endDate
+        ? dayjs(sub.endDate).tz(tz).format('YYYY-MM-DD')
+        : renewalDateStr;
+      const expiryLabel = lang === 'zh' ? '📅 到期' : '📅 Expires';
+      for (const daysBefore of alarmDays) {
+        const eventDateStr = dayjs(endStr).subtract(daysBefore, 'day').format('YYYY-MM-DD');
+        const summary = daysBefore === 0
+          ? `${expiryLabel}: ${sub.name}`
+          : (lang === 'zh'
+            ? `⏰ ${sub.name} ${daysBefore}天后到期`
+            : `⏰ ${sub.name} expires in ${daysBefore} day${daysBefore > 1 ? 's' : ''}`);
+        calendar.createEvent({
+          id: `${sub.id}-custom-d${daysBefore}`,
+          start: dateAtNoonUTC(eventDateStr),
+          allDay: true,
+          summary,
+          description: baseDescription,
+        });
+      }
+      continue;
+    }
+
     // Build repeating rule for auto-renew
     const repeating = sub.autoRenew
       ? (cycleDays <= 7

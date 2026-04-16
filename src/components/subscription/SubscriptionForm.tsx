@@ -57,6 +57,7 @@ const defaultForm = {
   currency: 'USD',
   cycle: 'MONTHLY',
   customCycleDays: '30',
+  endDate: '',
   startDate: dayjs().format('YYYY-MM-DD'),
   nextRenewalDate: dayjs().add(1, 'month').format('YYYY-MM-DD'),
   category: '',
@@ -107,6 +108,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
         currency: (initialValues.currency as string) || 'USD',
         cycle: (initialValues.cycle as string) || 'MONTHLY',
         customCycleDays: String(initialValues.customCycleDays || '30'),
+        endDate: initialValues.endDate ? dayjs(initialValues.endDate as string).format('YYYY-MM-DD') : '',
         startDate: initialValues.startDate ? dayjs(initialValues.startDate as string).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
         nextRenewalDate: initialValues.nextRenewalDate ? dayjs(initialValues.nextRenewalDate as string).format('YYYY-MM-DD') : dayjs().add(1, 'month').format('YYYY-MM-DD'),
         category: (initialValues.category as string) || '',
@@ -128,9 +130,14 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
   }, [open, initialValues]);
 
   const handleCycleChange = (newCycle: string) => {
-    updateField('cycle', newCycle);
-    const nr = calcNextRenewal(form.startDate, newCycle, parseInt(form.customCycleDays) || 30);
-    setForm(prev => ({ ...prev, cycle: newCycle, nextRenewalDate: nr }));
+    if (newCycle === 'CUSTOM') {
+      // CUSTOM = fixed-period, auto-calculate from endDate
+      const end = form.endDate || dayjs(form.startDate).add(1, 'year').format('YYYY-MM-DD');
+      setForm(prev => ({ ...prev, cycle: newCycle, endDate: end, nextRenewalDate: end, autoRenew: false }));
+    } else {
+      const nr = calcNextRenewal(form.startDate, newCycle, parseInt(form.customCycleDays) || 30);
+      setForm(prev => ({ ...prev, cycle: newCycle, nextRenewalDate: nr }));
+    }
   };
 
   const handleStartDateChange = (date: string) => {
@@ -147,7 +154,10 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
         amount: parseFloat(form.amount),
         currency: form.currency,
         cycle: form.cycle,
-        customCycleDays: form.cycle === 'CUSTOM' ? parseInt(form.customCycleDays) : null,
+        customCycleDays: form.cycle === 'CUSTOM' && form.endDate
+          ? dayjs(form.endDate).diff(dayjs(form.startDate), 'day')
+          : null,
+        endDate: form.cycle === 'CUSTOM' && form.endDate ? dayjs(form.endDate).toISOString() : null,
         startDate: dayjs(form.startDate).toISOString(),
         nextRenewalDate: dayjs(form.nextRenewalDate).toISOString(),
         category: form.category || null,
@@ -270,20 +280,17 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
             </div>
           </div>
 
-          {/* Custom Days */}
+          {/* End Date (CUSTOM = fixed-period subscription) */}
           {form.cycle === 'CUSTOM' && (
             <div className="space-y-1.5">
-              <Label>{t('subscription.customDays')}</Label>
-              <Input
-                type="number"
-                min="1"
-                max="3650"
-                value={form.customCycleDays}
-                onChange={(e) => {
-                  updateField('customCycleDays', e.target.value);
-                  updateNextRenewal(undefined, undefined, e.target.value);
+              <Label>{locale === 'zh' ? '结束日期' : 'End Date'}</Label>
+              <DatePicker
+                value={form.endDate}
+                onChange={(v) => {
+                  setForm(prev => ({ ...prev, endDate: v, nextRenewalDate: v }));
                 }}
-                className="w-40"
+                locale={locale}
+                placeholder={locale === 'zh' ? '选择结束日期' : 'Select end date'}
               />
             </div>
           )}
@@ -299,7 +306,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
                 placeholder={t('subscription.startDate')}
               />
             </div>
-            {form.cycle !== 'ONE_TIME' && (
+            {form.cycle !== 'ONE_TIME' && form.cycle !== 'CUSTOM' && (
               <div className="space-y-1.5">
                 <Label>{t('subscription.nextRenewal')}</Label>
                 <DatePicker
@@ -394,7 +401,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
               />
               <Label>{t('subscription.active')}</Label>
             </div>
-            {form.cycle !== 'ONE_TIME' && (
+            {form.cycle !== 'ONE_TIME' && form.cycle !== 'CUSTOM' && (
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.autoRenew}

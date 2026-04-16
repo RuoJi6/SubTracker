@@ -98,6 +98,7 @@ export async function PUT(
         currency: body.currency,
         cycle: body.cycle,
         customCycleDays: body.customCycleDays,
+        endDate: body.endDate !== undefined ? (body.endDate ? new Date(body.endDate) : null) : undefined,
         startDate: body.startDate ? new Date(body.startDate) : undefined,
         nextRenewalDate: body.nextRenewalDate ? new Date(body.nextRenewalDate) : undefined,
         url: body.url,

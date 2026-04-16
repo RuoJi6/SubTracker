@@ -66,7 +66,7 @@ export function getCycleLabel(cycle: string, lang: string = 'zh'): string {
     QUARTERLY: { zh: '每季度', en: 'Quarterly' },
     YEARLY: { zh: '每年', en: 'Yearly' },
     ONE_TIME: { zh: '买断', en: 'One-time' },
-    CUSTOM: { zh: '自定义', en: 'Custom' },
+    CUSTOM: { zh: '固定期限', en: 'Fixed Period' },
   };
   return labels[cycle]?.[lang] || cycle;
 }

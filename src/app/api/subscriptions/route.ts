@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
         currency: body.currency,
         cycle: body.cycle,
         customCycleDays: body.customCycleDays || null,
+        endDate: body.endDate ? new Date(body.endDate) : null,
         startDate: new Date(body.startDate),
         nextRenewalDate: new Date(body.nextRenewalDate),
         url: body.url || null,

@@ -79,7 +79,7 @@
       "QUARTERLY": "每季度",
       "YEARLY": "每年",
       "ONE_TIME": "买断",
-      "CUSTOM": "自定义"
+      "CUSTOM": "固定期限"
     },
     "categories": {
       "development": "开发工具",
