@@ -195,7 +195,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="glass-card max-w-xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="glass-card sm:max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialValues ? t('subscription.editTitle') : t('subscription.addNew')}</DialogTitle>
         </DialogHeader>

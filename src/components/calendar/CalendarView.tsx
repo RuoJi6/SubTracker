@@ -341,7 +341,7 @@ export default function CalendarView() {
 
       {/* Date Detail Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="glass-card max-w-md">
+        <DialogContent className="glass-card sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />

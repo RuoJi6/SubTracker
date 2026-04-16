@@ -531,7 +531,7 @@ export default function StatsCards() {
 
       {/* Breakdown Dialog */}
       <Dialog open={breakdownType !== null} onOpenChange={() => setBreakdownType(null)}>
-        <DialogContent className="max-w-2xl glass-card max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl glass-card max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {breakdownType === 'monthly' ? t('dashboard.totalMonthly')
@@ -595,7 +595,7 @@ export default function StatsCards() {
 
       {/* Subscription Detail Dialog */}
       <Dialog open={detailSub !== null} onOpenChange={() => setDetailSub(null)}>
-        <DialogContent className="glass-card max-w-lg">
+        <DialogContent className="glass-card sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{detailSub?.name || ''}</DialogTitle>
           </DialogHeader>
@@ -664,12 +664,12 @@ export default function StatsCards() {
 
       {/* Active Subscriptions List Dialog */}
       <Dialog open={showActiveList} onOpenChange={setShowActiveList}>
-        <DialogContent className="max-w-3xl glass-card max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl glass-card max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{`${t('dashboard.activeCount')} (${activeCount})`}</DialogTitle>
           </DialogHeader>
           <div className="space-y-0">
-            <div className="grid grid-cols-[2fr_1.2fr_1fr_2.5fr_1fr] text-xs font-medium text-muted-foreground px-2 py-2 border-b border-border">
+            <div className="grid grid-cols-[2.5fr_1.2fr_1fr_2fr_1fr] text-xs font-medium text-muted-foreground px-2 py-2 border-b border-border">
               <span>{t('subscription.name')}</span>
               <span>{t('subscription.amount')}</span>
               <span>{t('subscription.cycle')}</span>
@@ -682,9 +682,9 @@ export default function StatsCards() {
                 <div
                   key={sub.id}
                   onClick={() => { setShowActiveList(false); setDetailSub(sub); }}
-                  className="grid grid-cols-[2fr_1.2fr_1fr_2.5fr_1fr] items-center text-sm py-2.5 px-2 border-b border-border/50 last:border-0 cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="grid grid-cols-[2.5fr_1.2fr_1fr_2fr_1fr] items-center text-sm py-2.5 px-2 border-b border-border/50 last:border-0 cursor-pointer hover:bg-accent/50 transition-colors"
                 >
-                  <span className="font-medium truncate pr-2">{sub.name}</span>
+                  <span className="font-medium break-words pr-2">{sub.name}</span>
                   <span className="tabular-nums">{getCurrencySymbol(sub.currency)}{sub.amount.toFixed(2)}</span>
                   <span>
                     <Badge variant="secondary" className="text-xs">{getCycleLabel(sub.cycle, locale)}</Badge>
@@ -725,7 +725,7 @@ export default function StatsCards() {
 
       {/* Total Spent Breakdown Dialog */}
       <Dialog open={showTotalSpent} onOpenChange={setShowTotalSpent}>
-        <DialogContent className="max-w-2xl glass-card max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl glass-card max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('dashboard.totalSpent')}</DialogTitle>
           </DialogHeader>
@@ -759,7 +759,7 @@ export default function StatsCards() {
 
       {/* Monthly Expense Detail Dialog */}
       <Dialog open={!!selectedBarMonth} onOpenChange={(open) => { if (!open) setSelectedBarMonth(null); }}>
-        <DialogContent className="max-w-lg glass-card max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg glass-card max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedBarMonth?.month} {locale === 'zh' ? '消费明细' : 'Expense Details'}
