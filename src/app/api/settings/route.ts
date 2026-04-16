@@ -72,7 +72,6 @@ export async function PUT(request: NextRequest) {
         calendarTitle: body.calendarTitle ?? null,
         calendarDesc: body.calendarDesc ?? null,
         calendarAlarmDays: body.calendarAlarmDays,
-        calendarRefreshMinutes: body.calendarRefreshMinutes,
         timezone: body.timezone,
       },
       create: {

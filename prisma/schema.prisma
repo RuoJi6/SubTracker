@@ -61,7 +61,6 @@ model GlobalSettings {
   calendarTitle     String? // Custom calendar event title template
   calendarDesc      String? // Custom calendar event description template
   calendarAlarmDays String  @default("[0,1]") // JSON array of days before event to trigger alarm
-  calendarRefreshMinutes Int  @default(360) // Calendar refresh interval in minutes
   timezone          String  @default("Asia/Shanghai")
 }
 

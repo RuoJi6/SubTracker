@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Copy, RefreshCw, Plus, Wallet, Send, Eye, Undo2, Info, Inbox, X } from 'lucide-react';
+import { Copy, RefreshCw, Plus, Wallet, Send, Eye, Undo2, Info, Inbox, X, CalendarDays } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { currencies } from '@/lib/currency';
 import { TEMPLATE_PLACEHOLDERS, SAMPLE_DATA, DEFAULT_DINGTALK_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, DEFAULT_CALENDAR_TITLE, DEFAULT_CALENDAR_DESC, renderTemplate } from '@/lib/notification/template';
@@ -38,7 +38,6 @@ interface FormValues {
   calendarDesc?: string;
   calendarToken?: string;
   calendarAlarmDays?: string;
-  calendarRefreshMinutes?: number;
 }
 
 export default function SettingsPage() {
@@ -57,6 +56,7 @@ export default function SettingsPage() {
   const calendarUrl = typeof window !== 'undefined' && calendarToken
     ? `${window.location.origin}/api/calendar?token=${calendarToken}`
     : '';
+  const webcalUrl = calendarUrl ? calendarUrl.replace(/^https?:\/\//, 'webcal://') : '';
 
   const updateField = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setFormValues((prev) => ({ ...prev, [key]: value }));
@@ -542,32 +542,6 @@ export default function SettingsPage() {
               </div>
               <p className="text-xs text-muted-foreground">{t('settings.calendarAlarmDaysHelp')}</p>
             </div>
-            <div className="space-y-2 max-w-[200px]">
-              <Label>{t('settings.calendarRefreshInterval')}</Label>
-              <Select
-                value={String(formValues.calendarRefreshMinutes ?? 360)}
-                onValueChange={(val) => updateField('calendarRefreshMinutes', Number(val ?? '360'))}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {(() => {
-                      const m = formValues.calendarRefreshMinutes ?? 360;
-                      if (m < 60) return `${m} ${t('settings.minutes')}`;
-                      return `${m / 60} ${t('settings.hours')}`;
-                    })()}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5 {t('settings.minutes')}</SelectItem>
-                  <SelectItem value="15">15 {t('settings.minutes')}</SelectItem>
-                  <SelectItem value="60">1 {t('settings.hours')}</SelectItem>
-                  <SelectItem value="180">3 {t('settings.hours')}</SelectItem>
-                  <SelectItem value="360">6 {t('settings.hours')}</SelectItem>
-                  <SelectItem value="720">12 {t('settings.hours')}</SelectItem>
-                  <SelectItem value="1440">24 {t('settings.hours')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           <Separator className="my-4" />
@@ -584,7 +558,14 @@ export default function SettingsPage() {
                 </InputGroupButton>
               </InputGroupAddon>
             </InputGroup>
-            <AlertDialog>
+            <div className="flex gap-2 flex-wrap">
+              {webcalUrl && (
+                <a href={webcalUrl} className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors">
+                  <CalendarDays className="size-4" />
+                  {formValues.language === 'zh' ? '订阅到 Apple 日历' : 'Subscribe in Apple Calendar'}
+                </a>
+              )}
+              <AlertDialog>
               <AlertDialogTrigger render={
                 <Button variant="destructive" size="sm" disabled={regenerating}>
                   <RefreshCw className={`size-4 ${regenerating ? 'animate-spin' : ''}`} />
@@ -606,6 +587,7 @@ export default function SettingsPage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            </div>
           </div>
         </CardContent>
       </Card>

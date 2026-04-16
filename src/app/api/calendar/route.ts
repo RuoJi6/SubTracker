@@ -50,14 +50,12 @@ export async function GET(request: NextRequest) {
       calendarTitle: settings?.calendarTitle,
       calendarDesc: settings?.calendarDesc,
       language: settings?.language,
-      refreshIntervalMinutes: settings?.calendarRefreshMinutes ?? 360,
       alarmDays: settings?.calendarAlarmDays ? JSON.parse(settings.calendarAlarmDays) : [0, 1],
     });
 
     return new NextResponse(ical, {
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="subtracker.ics"',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     });
