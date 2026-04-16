@@ -38,13 +38,14 @@ const cycleOptions = ['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'ONE_TIME', 'C
 const categoryOptions = ['development', 'design', 'productivity', 'entertainment', 'cloud', 'communication', 'education', 'other'];
 const paymentMethodOptions = ['alipay', 'wechat', 'credit_card', 'debit_card', 'paypal', 'apple_pay', 'google_pay', 'bank_transfer', 'crypto'];
 
-function calcNextRenewal(startDate: string, cycle: string, customDays?: number): string {
+function calcNextRenewal(startDate: string, cycle: string, customDays?: number, multiplier: number = 1): string {
   const d = dayjs(startDate);
+  const m = Math.max(1, multiplier);
   switch (cycle) {
-    case 'WEEKLY': return d.add(1, 'week').format('YYYY-MM-DD');
-    case 'MONTHLY': return d.add(1, 'month').format('YYYY-MM-DD');
-    case 'QUARTERLY': return d.add(3, 'month').format('YYYY-MM-DD');
-    case 'YEARLY': return d.add(1, 'year').format('YYYY-MM-DD');
+    case 'WEEKLY': return d.add(1 * m, 'week').format('YYYY-MM-DD');
+    case 'MONTHLY': return d.add(1 * m, 'month').format('YYYY-MM-DD');
+    case 'QUARTERLY': return d.add(3 * m, 'month').format('YYYY-MM-DD');
+    case 'YEARLY': return d.add(1 * m, 'year').format('YYYY-MM-DD');
     case 'ONE_TIME': return d.format('YYYY-MM-DD');
     case 'CUSTOM': return d.add(customDays || 30, 'day').format('YYYY-MM-DD');
     default: return d.add(1, 'month').format('YYYY-MM-DD');
@@ -56,6 +57,7 @@ const defaultForm = {
   amount: '',
   currency: 'USD',
   cycle: 'MONTHLY',
+  cycleMultiplier: '1',
   customCycleDays: '30',
   endDate: '',
   startDate: dayjs().format('YYYY-MM-DD'),
@@ -83,11 +85,12 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
-  const updateNextRenewal = (startDate?: string, cycle?: string, customDays?: string) => {
+  const updateNextRenewal = (startDate?: string, cycle?: string, customDays?: string, mult?: string) => {
     const s = startDate ?? form.startDate;
     const c = cycle ?? form.cycle;
     const d = parseInt(customDays ?? form.customCycleDays) || 30;
-    setForm(prev => ({ ...prev, nextRenewalDate: calcNextRenewal(s, c, d) }));
+    const m = parseInt(mult ?? form.cycleMultiplier) || 1;
+    setForm(prev => ({ ...prev, nextRenewalDate: calcNextRenewal(s, c, d, m) }));
   };
 
   useEffect(() => {
@@ -107,6 +110,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
         amount: String(initialValues.amount || ''),
         currency: (initialValues.currency as string) || 'USD',
         cycle: (initialValues.cycle as string) || 'MONTHLY',
+        cycleMultiplier: String(initialValues.cycleMultiplier || '1'),
         customCycleDays: String(initialValues.customCycleDays || '30'),
         endDate: initialValues.endDate ? dayjs(initialValues.endDate as string).format('YYYY-MM-DD') : '',
         startDate: initialValues.startDate ? dayjs(initialValues.startDate as string).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
@@ -131,11 +135,11 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
 
   const handleCycleChange = (newCycle: string) => {
     if (newCycle === 'CUSTOM') {
-      // CUSTOM = fixed-period, auto-calculate from endDate
       const end = form.endDate || dayjs(form.startDate).add(1, 'year').format('YYYY-MM-DD');
-      setForm(prev => ({ ...prev, cycle: newCycle, endDate: end, nextRenewalDate: end, autoRenew: false }));
+      setForm(prev => ({ ...prev, cycle: newCycle, endDate: end, nextRenewalDate: end, autoRenew: false, cycleMultiplier: '1' }));
     } else {
-      const nr = calcNextRenewal(form.startDate, newCycle, parseInt(form.customCycleDays) || 30);
+      const m = parseInt(form.cycleMultiplier) || 1;
+      const nr = calcNextRenewal(form.startDate, newCycle, parseInt(form.customCycleDays) || 30, m);
       setForm(prev => ({ ...prev, cycle: newCycle, nextRenewalDate: nr }));
     }
   };
@@ -154,6 +158,7 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
         amount: parseFloat(form.amount),
         currency: form.currency,
         cycle: form.cycle,
+        cycleMultiplier: parseInt(form.cycleMultiplier) || 1,
         customCycleDays: form.cycle === 'CUSTOM' && form.endDate
           ? dayjs(form.endDate).diff(dayjs(form.startDate), 'day')
           : null,
@@ -278,6 +283,29 @@ export default function SubscriptionForm({ open, onClose, onSubmit, initialValue
                 </Badge>
               ))}
             </div>
+            {/* Cycle Multiplier - only for recurring cycles */}
+            {!['ONE_TIME', 'CUSTOM'].includes(form.cycle) && (
+              <div className="flex items-center gap-2 mt-2">
+                <Label className="text-xs shrink-0">{locale === 'zh' ? '每' : 'Every'}</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={form.cycleMultiplier}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateField('cycleMultiplier', val);
+                    updateNextRenewal(undefined, undefined, undefined, val);
+                  }}
+                  className="w-16 h-7 text-center text-xs"
+                />
+                <span className="text-xs text-muted-foreground">
+                  {locale === 'zh'
+                    ? { WEEKLY: '周', MONTHLY: '个月', QUARTERLY: '个季度', YEARLY: '年' }[form.cycle] || ''
+                    : { WEEKLY: 'week(s)', MONTHLY: 'month(s)', QUARTERLY: 'quarter(s)', YEARLY: 'year(s)' }[form.cycle] || ''}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Dates */}

@@ -59,7 +59,7 @@ export function formatAmount(amount: number, currency: string): string {
   return `${symbol}${formatted}`;
 }
 
-export function getCycleLabel(cycle: string, lang: string = 'zh'): string {
+export function getCycleLabel(cycle: string, lang: string = 'zh', multiplier: number = 1): string {
   const labels: Record<string, Record<string, string>> = {
     WEEKLY: { zh: '每周', en: 'Weekly' },
     MONTHLY: { zh: '每月', en: 'Monthly' },
@@ -68,43 +68,57 @@ export function getCycleLabel(cycle: string, lang: string = 'zh'): string {
     ONE_TIME: { zh: '买断', en: 'One-time' },
     CUSTOM: { zh: '固定期限', en: 'Fixed Period' },
   };
-  return labels[cycle]?.[lang] || cycle;
+  const base = labels[cycle]?.[lang] || cycle;
+  if (multiplier <= 1 || cycle === 'ONE_TIME' || cycle === 'CUSTOM') return base;
+  // e.g. "每 3 年", "Every 3 years"
+  const units: Record<string, Record<string, string>> = {
+    WEEKLY: { zh: '周', en: 'week' },
+    MONTHLY: { zh: '月', en: 'month' },
+    QUARTERLY: { zh: '季度', en: 'quarter' },
+    YEARLY: { zh: '年', en: 'year' },
+  };
+  const unit = units[cycle]?.[lang] || '';
+  if (lang === 'zh') return `每 ${multiplier} ${unit}`;
+  const plural = multiplier > 1 ? 's' : '';
+  return `Every ${multiplier} ${unit}${plural}`;
 }
 
-export function getCycleDays(cycle: string, customDays?: number): number {
+export function getCycleDays(cycle: string, customDays?: number, multiplier: number = 1): number {
   switch (cycle) {
-    case 'WEEKLY': return 7;
-    case 'MONTHLY': return 30;
-    case 'QUARTERLY': return 90;
-    case 'YEARLY': return 365;
+    case 'WEEKLY': return 7 * multiplier;
+    case 'MONTHLY': return 30 * multiplier;
+    case 'QUARTERLY': return 90 * multiplier;
+    case 'YEARLY': return 365 * multiplier;
     case 'ONE_TIME': return 0;
     case 'CUSTOM': return customDays || 30;
-    default: return 30;
+    default: return 30 * multiplier;
   }
 }
 
 /**
  * Calculate the next renewal date from a given date based on cycle type.
- * Advances by one cycle period.
+ * Advances by one cycle period × multiplier.
  */
 export function calcNextRenewalDate(
   fromDate: Date,
   cycle: string,
-  customCycleDays?: number | null
+  customCycleDays?: number | null,
+  multiplier: number = 1
 ): Date {
   const d = new Date(fromDate);
+  const m = Math.max(1, multiplier);
   switch (cycle) {
     case 'WEEKLY':
-      d.setDate(d.getDate() + 7);
+      d.setDate(d.getDate() + 7 * m);
       break;
     case 'MONTHLY':
-      d.setMonth(d.getMonth() + 1);
+      d.setMonth(d.getMonth() + 1 * m);
       break;
     case 'QUARTERLY':
-      d.setMonth(d.getMonth() + 3);
+      d.setMonth(d.getMonth() + 3 * m);
       break;
     case 'YEARLY':
-      d.setFullYear(d.getFullYear() + 1);
+      d.setFullYear(d.getFullYear() + 1 * m);
       break;
     case 'CUSTOM':
       d.setDate(d.getDate() + (customCycleDays || 30));

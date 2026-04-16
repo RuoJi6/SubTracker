@@ -11,7 +11,10 @@ interface Subscription {
   amount: number;
   currency: string;
   cycle: string;
+  cycleMultiplier?: number | null;
   customCycleDays?: number | null;
+  endDate?: string | null;
+  autoRenew?: boolean;
   startDate: string;
   nextRenewalDate: string;
   url?: string | null;

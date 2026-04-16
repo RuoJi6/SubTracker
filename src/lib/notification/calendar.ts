@@ -42,7 +42,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
   for (const sub of subscriptions) {
     if (!sub.isActive) continue;
 
-    const cycleDays = getCycleDays(sub.cycle, sub.customCycleDays ?? undefined);
+    const cycleDays = getCycleDays(sub.cycle, sub.customCycleDays ?? undefined, sub.cycleMultiplier ?? 1);
     // Extract date in the configured timezone to avoid UTC offset issues
     const renewalDateStr = dayjs(sub.nextRenewalDate).tz(tz).format('YYYY-MM-DD');
 
@@ -52,7 +52,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
       renewalDate: renewalDateStr,
       daysUntil: 0,
       urgency: lang === 'zh' ? '📅 续费日' : '📅 Renewal Day',
-      cycle: getCycleLabel(sub.cycle, lang),
+      cycle: getCycleLabel(sub.cycle, lang, sub.cycleMultiplier ?? 1),
       category: translateCategory(sub.category || 'other', lang),
       paymentMethod: translatePaymentMethod(sub.paymentMethod || '', lang) || '-',
       autoRenew: sub.autoRenew
@@ -100,15 +100,18 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
       continue;
     }
 
-    // Build repeating rule for auto-renew
+    // Build repeating rule for auto-renew (with multiplier)
+    const m = sub.cycleMultiplier || 1;
     const repeating = sub.autoRenew
-      ? (cycleDays <= 7
-        ? { freq: ICalEventRepeatingFreq.WEEKLY, interval: cycleDays / 7 }
-        : cycleDays <= 31
-          ? { freq: ICalEventRepeatingFreq.MONTHLY, interval: 1 }
-          : cycleDays <= 92
-            ? { freq: ICalEventRepeatingFreq.MONTHLY, interval: 3 }
-            : { freq: ICalEventRepeatingFreq.YEARLY, interval: 1 })
+      ? (sub.cycle === 'WEEKLY'
+        ? { freq: ICalEventRepeatingFreq.WEEKLY, interval: m }
+        : sub.cycle === 'MONTHLY'
+          ? { freq: ICalEventRepeatingFreq.MONTHLY, interval: 1 * m }
+          : sub.cycle === 'QUARTERLY'
+            ? { freq: ICalEventRepeatingFreq.MONTHLY, interval: 3 * m }
+            : sub.cycle === 'YEARLY'
+              ? { freq: ICalEventRepeatingFreq.YEARLY, interval: m }
+              : { freq: ICalEventRepeatingFreq.DAILY, interval: cycleDays })
       : null;
 
     // Create a separate calendar event for each alarm day

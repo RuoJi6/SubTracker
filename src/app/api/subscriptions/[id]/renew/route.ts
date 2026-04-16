@@ -26,24 +26,24 @@ export async function POST(
       );
     }
 
-    // If the subscription is overdue, calculate from today instead of the old date
     const base = dayjs(sub.nextRenewalDate);
     const today = dayjs().startOf('day');
     const current = base.isBefore(today) ? today : base;
     let next: dayjs.Dayjs;
+    const m = sub.cycleMultiplier || 1;
 
     switch (sub.cycle) {
       case 'WEEKLY':
-        next = current.add(1, 'week');
+        next = current.add(1 * m, 'week');
         break;
       case 'MONTHLY':
-        next = current.add(1, 'month');
+        next = current.add(1 * m, 'month');
         break;
       case 'QUARTERLY':
-        next = current.add(3, 'month');
+        next = current.add(3 * m, 'month');
         break;
       case 'YEARLY':
-        next = current.add(1, 'year');
+        next = current.add(1 * m, 'year');
         break;
       case 'CUSTOM':
         next = current.add(sub.customCycleDays || 30, 'day');

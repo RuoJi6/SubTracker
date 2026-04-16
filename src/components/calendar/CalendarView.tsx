@@ -22,6 +22,7 @@ interface Subscription {
   startDate: string;
   cycle: string;
   customCycleDays?: number | null;
+  cycleMultiplier?: number | null;
   autoRenew?: boolean;
   isActive: boolean;
   category?: string | null;
@@ -33,12 +34,13 @@ interface RenewalEvent {
   projected?: boolean;
 }
 
-function addOneCycle(d: Dayjs, cycle: string, customDays?: number | null): Dayjs {
+function addOneCycle(d: Dayjs, cycle: string, customDays?: number | null, multiplier: number = 1): Dayjs {
+  const m = Math.max(1, multiplier);
   switch (cycle) {
-    case 'WEEKLY': return d.add(1, 'week');
-    case 'MONTHLY': return d.add(1, 'month');
-    case 'QUARTERLY': return d.add(3, 'month');
-    case 'YEARLY': return d.add(1, 'year');
+    case 'WEEKLY': return d.add(1 * m, 'week');
+    case 'MONTHLY': return d.add(1 * m, 'month');
+    case 'QUARTERLY': return d.add(3 * m, 'month');
+    case 'YEARLY': return d.add(1 * m, 'year');
     case 'CUSTOM': return d.add(customDays || 30, 'day');
     default: return d.add(1, 'month');
   }
@@ -74,7 +76,7 @@ function getRenewalDatesInRange(
     if (cursor.isAfter(rangeStart) || cursor.isSame(rangeStart, 'day')) {
       results.push({ date: cursor, projected: !cursor.isSame(next, 'day') });
     }
-    cursor = addOneCycle(cursor, sub.cycle, sub.customCycleDays);
+    cursor = addOneCycle(cursor, sub.cycle, sub.customCycleDays, sub.cycleMultiplier || 1);
     count++;
     if (count > limit) break;
   }
@@ -320,7 +322,7 @@ export default function CalendarView() {
                                 {ev.projected ? `↻ ${ev.sub.name}` : ev.sub.name}
                               </TooltipTrigger>
                               <TooltipContent>
-                                {ev.sub.name} · {getCurrencySymbol(ev.sub.currency)}{ev.sub.amount.toFixed(2)} · {getCycleLabel(ev.sub.cycle, locale)}
+                                {ev.sub.name} · {getCurrencySymbol(ev.sub.currency)}{ev.sub.amount.toFixed(2)} · {getCycleLabel(ev.sub.cycle, locale, ev.sub.cycleMultiplier || 1)}
                                 {ev.projected && (locale === 'zh' ? ' · 自动续费' : ' · Auto')}
                               </TooltipContent>
                             </Tooltip>
@@ -398,7 +400,7 @@ export default function CalendarView() {
                     </div>
                     <div className="space-y-0.5 text-sm text-muted-foreground">
                       <p>{t('calendar.amount')}: <span className="font-medium text-foreground">{getCurrencySymbol(ev.sub.currency)}{ev.sub.amount.toFixed(2)}</span></p>
-                      <p>{t('calendar.cycle')}: {getCycleLabel(ev.sub.cycle, locale)}</p>
+                      <p>{t('calendar.cycle')}: {getCycleLabel(ev.sub.cycle, locale, ev.sub.cycleMultiplier || 1)}</p>
                       {ev.sub.category && (
                         <Badge variant="outline" className="mt-1 text-xs">{t(`subscription.categories.${ev.sub.category}`)}</Badge>
                       )}

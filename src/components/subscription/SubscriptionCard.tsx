@@ -34,6 +34,7 @@ interface SubscriptionCardProps {
     currency: string;
     cycle: string;
     customCycleDays?: number | null;
+    cycleMultiplier?: number | null;
     endDate?: string | null;
     autoRenew?: boolean;
     startDate: string;
@@ -80,17 +81,18 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete, onRen
   const nextRenewal = dayjs(subscription.nextRenewalDate);
   const daysUntil = nextRenewal.diff(now, 'day');
 
-  const getCycleDays = () => {
+  const getCycleDaysLocal = () => {
+    const m = subscription.cycleMultiplier || 1;
     switch (subscription.cycle) {
-      case 'WEEKLY': return 7;
-      case 'MONTHLY': return 30;
-      case 'QUARTERLY': return 90;
-      case 'YEARLY': return 365;
+      case 'WEEKLY': return 7 * m;
+      case 'MONTHLY': return 30 * m;
+      case 'QUARTERLY': return 90 * m;
+      case 'YEARLY': return 365 * m;
       case 'CUSTOM': return subscription.customCycleDays || 30;
       default: return 30;
     }
   };
-  const cycleDays = getCycleDays();
+  const cycleDays = getCycleDaysLocal();
   const elapsed = cycleDays - Math.max(daysUntil, 0);
   const progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / cycleDays) * 100)));
 
@@ -138,7 +140,7 @@ export default function SubscriptionCard({ subscription, onEdit, onDelete, onRen
               {getCurrencySymbol(subscription.currency)}{subscription.amount.toFixed(2)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {getCycleLabel(subscription.cycle, locale)}
+              {getCycleLabel(subscription.cycle, locale, subscription.cycleMultiplier || 1)}
             </p>
           </div>
         </div>

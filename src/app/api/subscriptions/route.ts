@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
         amount: body.amount,
         currency: body.currency,
         cycle: body.cycle,
+        cycleMultiplier: body.cycleMultiplier || 1,
         customCycleDays: body.customCycleDays || null,
         endDate: body.endDate ? new Date(body.endDate) : null,
         startDate: new Date(body.startDate),

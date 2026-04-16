@@ -61,7 +61,7 @@ export async function checkAndSendNotifications(): Promise<{
           renewalDate: dateStr,
           daysUntil,
           urgency,
-          cycle: getCycleLabel(sub.cycle, lang),
+          cycle: getCycleLabel(sub.cycle, lang, sub.cycleMultiplier ?? 1),
           category: translateCategory(sub.category || 'other', lang),
           paymentMethod: translatePaymentMethod(sub.paymentMethod || '', lang) || '-',
           autoRenew: sub.autoRenew

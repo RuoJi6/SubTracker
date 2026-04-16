@@ -27,7 +27,9 @@ interface Subscription {
   amount: number;
   currency: string;
   cycle: string;
+  cycleMultiplier?: number | null;
   customCycleDays?: number | null;
+  endDate?: string | null;
   nextRenewalDate: string;
   startDate: string;
   isActive: boolean;
@@ -124,10 +126,12 @@ export default function StatsCards() {
 
   const breakdownData = useMemo(() => recurring.map((sub) => {
     let monthlyAmount = sub.amount;
+    const mult = sub.cycleMultiplier || 1;
     switch (sub.cycle) {
-      case 'WEEKLY': monthlyAmount = sub.amount * 4.33; break;
-      case 'QUARTERLY': monthlyAmount = sub.amount / 3; break;
-      case 'YEARLY': monthlyAmount = sub.amount / 12; break;
+      case 'WEEKLY': monthlyAmount = sub.amount * (4.33 / mult); break;
+      case 'MONTHLY': monthlyAmount = sub.amount / mult; break;
+      case 'QUARTERLY': monthlyAmount = sub.amount / (3 * mult); break;
+      case 'YEARLY': monthlyAmount = sub.amount / (12 * mult); break;
     }
     if (sub.currency !== displayCurrency && sub.exchangeRateAtPurchase) {
       monthlyAmount *= sub.exchangeRateAtPurchase;
@@ -135,6 +139,7 @@ export default function StatsCards() {
     return {
       key: sub.id, name: sub.name, originalAmount: sub.amount,
       originalCurrency: sub.currency, cycle: sub.cycle,
+      cycleMultiplier: mult,
       monthly: monthlyAmount, yearly: monthlyAmount * 12,
     };
   }).sort((a, b) => b.monthly - a.monthly), [recurring, displayCurrency]);
@@ -156,7 +161,7 @@ export default function StatsCards() {
     const now = dayjs();
     const items: {
       key: string; name: string; originalAmount: number; originalCurrency: string;
-      cycle: string; payments: number; totalSpent: number; startDate: string;
+      cycle: string; cycleMultiplier: number; payments: number; totalSpent: number; startDate: string;
     }[] = [];
 
     for (const sub of subscriptions) {
@@ -168,7 +173,7 @@ export default function StatsCards() {
       if (sub.cycle === 'ONE_TIME') {
         items.push({
           key: sub.id, name: sub.name, originalAmount: sub.amount,
-          originalCurrency: sub.currency, cycle: sub.cycle,
+          originalCurrency: sub.currency, cycle: sub.cycle, cycleMultiplier: 1,
           payments: 1, totalSpent: amount, startDate: sub.startDate,
         });
         continue;
@@ -179,11 +184,12 @@ export default function StatsCards() {
       if (daysSinceStart < 0) continue;
 
       let cycleDays: number;
+      const m = sub.cycleMultiplier || 1;
       switch (sub.cycle) {
-        case 'WEEKLY': cycleDays = 7; break;
-        case 'MONTHLY': cycleDays = 30; break;
-        case 'QUARTERLY': cycleDays = 90; break;
-        case 'YEARLY': cycleDays = 365; break;
+        case 'WEEKLY': cycleDays = 7 * m; break;
+        case 'MONTHLY': cycleDays = 30 * m; break;
+        case 'QUARTERLY': cycleDays = 90 * m; break;
+        case 'YEARLY': cycleDays = 365 * m; break;
         case 'CUSTOM': cycleDays = sub.customCycleDays || 30; break;
         default: cycleDays = 30;
       }
@@ -191,7 +197,7 @@ export default function StatsCards() {
       const payments = Math.floor(daysSinceStart / cycleDays) + 1;
       items.push({
         key: sub.id, name: sub.name, originalAmount: sub.amount,
-        originalCurrency: sub.currency, cycle: sub.cycle,
+        originalCurrency: sub.currency, cycle: sub.cycle, cycleMultiplier: m,
         payments, totalSpent: amount * payments, startDate: sub.startDate,
       });
     }
@@ -246,22 +252,23 @@ export default function StatsCards() {
         let subAmount = 0;
         if (sub.autoRenew) {
           const renewalDate = dayjs(sub.nextRenewalDate);
+          const mult = sub.cycleMultiplier || 1;
           switch (sub.cycle) {
             case 'WEEKLY':
-              subAmount = converted * 4.33;
+              subAmount = converted * (4.33 / mult);
               break;
             case 'MONTHLY':
-              subAmount = converted;
+              subAmount = converted / mult;
               break;
             case 'QUARTERLY':
               for (let q = -8; q <= 8; q++) {
-                const d = renewalDate.add(q * 3, 'month');
+                const d = renewalDate.add(q * 3 * mult, 'month');
                 if (d.isSame(monthStart, 'month')) { subAmount = converted; break; }
               }
               break;
             case 'YEARLY':
               for (let y = -5; y <= 5; y++) {
-                const d = renewalDate.add(y, 'year');
+                const d = renewalDate.add(y * mult, 'year');
                 if (d.isSame(monthStart, 'month')) { subAmount = converted; break; }
               }
               break;
@@ -574,7 +581,7 @@ export default function StatsCards() {
                   <span className="font-medium">{d.name}</span>
                   <span className="text-muted-foreground">{getCurrencySymbol(d.originalCurrency)}{d.originalAmount.toFixed(2)}</span>
                   <span>
-                    <Badge variant="secondary" className="text-xs">{getCycleLabel(d.cycle, locale)}</Badge>
+                    <Badge variant="secondary" className="text-xs">{getCycleLabel(d.cycle, locale, d.cycleMultiplier || 1)}</Badge>
                   </span>
                   <span className="text-right font-semibold text-primary">
                     {symbol}{(breakdownType === 'monthly' ? d.monthly : d.yearly).toFixed(2)}
@@ -608,7 +615,7 @@ export default function StatsCards() {
               </DetailRow>
               <DetailRow label={t('subscription.currency')}>{detailSub.currency}</DetailRow>
               <DetailRow label={t('subscription.cycle')}>
-                <Badge variant="secondary">{getCycleLabel(detailSub.cycle, locale)}</Badge>
+                <Badge variant="secondary">{getCycleLabel(detailSub.cycle, locale, detailSub.cycleMultiplier || 1)}</Badge>
               </DetailRow>
               <DetailRow label={t('subscription.active')}>
                 <Badge variant={detailSub.isActive ? 'default' : 'secondary'} className={detailSub.isActive ? 'bg-green-100 text-green-700' : ''}>
@@ -687,7 +694,7 @@ export default function StatsCards() {
                   <span className="font-medium break-words pr-2">{sub.name}</span>
                   <span className="tabular-nums">{getCurrencySymbol(sub.currency)}{sub.amount.toFixed(2)}</span>
                   <span>
-                    <Badge variant="secondary" className="text-xs">{getCycleLabel(sub.cycle, locale)}</Badge>
+                    <Badge variant="secondary" className="text-xs">{getCycleLabel(sub.cycle, locale, sub.cycleMultiplier || 1)}</Badge>
                   </span>
                   <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                     {sub.cycle === 'ONE_TIME' ? (
@@ -742,7 +749,7 @@ export default function StatsCards() {
                 <span className="font-medium truncate pr-2">{d.name}</span>
                 <span className="text-muted-foreground">{getCurrencySymbol(d.originalCurrency)}{d.originalAmount.toFixed(2)}</span>
                 <span>
-                  <Badge variant="secondary" className="text-xs">{getCycleLabel(d.cycle, locale)}</Badge>
+                  <Badge variant="secondary" className="text-xs">{getCycleLabel(d.cycle, locale, d.cycleMultiplier || 1)}</Badge>
                 </span>
                 <span className="text-center tabular-nums">{d.payments}</span>
                 <span className="text-right font-semibold text-primary tabular-nums">{symbol}{d.totalSpent.toFixed(2)}</span>

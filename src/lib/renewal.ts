@@ -34,7 +34,7 @@ export async function advanceExpiredRenewals(): Promise<{
         // Advance nextRenewalDate until it's in the future
         let nextDate = new Date(sub.nextRenewalDate);
         while (nextDate <= now) {
-          nextDate = calcNextRenewalDate(nextDate, sub.cycle, sub.customCycleDays);
+          nextDate = calcNextRenewalDate(nextDate, sub.cycle, sub.customCycleDays, sub.cycleMultiplier);
         }
 
         // Refresh exchange rate if currencies differ
