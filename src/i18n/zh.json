@@ -158,8 +158,9 @@
     "calendarAlarmOnDay": "当天",
     "calendarAlarmDaysBefore": "天前",
     "calendarAlarmDaysHelp": "选择在事件发生前多少天触发日历提醒（可多选）",
-    "calendarRefreshHours": "日历刷新频率",
+    "calendarRefreshInterval": "日历刷新频率",
     "hours": "小时",
+    "minutes": "分钟",
     "regenerateToken": "重新生成令牌",
     "regenerateConfirm": "重新生成后，旧的日历订阅链接将失效，需要重新在 Apple 日历中添加。确认继续？",
     "tokenRegenerated": "令牌已重新生成"

@@ -158,8 +158,9 @@
     "calendarAlarmOnDay": "On the day",
     "calendarAlarmDaysBefore": "days before",
     "calendarAlarmDaysHelp": "Choose how many days before the event to trigger a calendar alarm (multi-select)",
-    "calendarRefreshHours": "Calendar Refresh Interval",
+    "calendarRefreshInterval": "Calendar Refresh Interval",
     "hours": "hours",
+    "minutes": "minutes",
     "regenerateToken": "Regenerate Token",
     "regenerateConfirm": "After regeneration, the old calendar subscription URL will stop working. You will need to re-add it in Apple Calendar. Continue?",
     "tokenRegenerated": "Token regenerated"

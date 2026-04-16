@@ -38,7 +38,7 @@ interface FormValues {
   calendarDesc?: string;
   calendarToken?: string;
   calendarAlarmDays?: string;
-  calendarRefreshHours?: number;
+  calendarRefreshMinutes?: number;
 }
 
 export default function SettingsPage() {
@@ -543,20 +543,28 @@ export default function SettingsPage() {
               <p className="text-xs text-muted-foreground">{t('settings.calendarAlarmDaysHelp')}</p>
             </div>
             <div className="space-y-2 max-w-[200px]">
-              <Label>{t('settings.calendarRefreshHours')}</Label>
+              <Label>{t('settings.calendarRefreshInterval')}</Label>
               <Select
-                value={String(formValues.calendarRefreshHours ?? 6)}
-                onValueChange={(val) => updateField('calendarRefreshHours', Number(val ?? '6'))}
+                value={String(formValues.calendarRefreshMinutes ?? 360)}
+                onValueChange={(val) => updateField('calendarRefreshMinutes', Number(val ?? '360'))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue>{formValues.calendarRefreshHours ?? 6} {t('settings.hours')}</SelectValue>
+                  <SelectValue>
+                    {(() => {
+                      const m = formValues.calendarRefreshMinutes ?? 360;
+                      if (m < 60) return `${m} ${t('settings.minutes')}`;
+                      return `${m / 60} ${t('settings.hours')}`;
+                    })()}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">1 {t('settings.hours')}</SelectItem>
-                  <SelectItem value="3">3 {t('settings.hours')}</SelectItem>
-                  <SelectItem value="6">6 {t('settings.hours')}</SelectItem>
-                  <SelectItem value="12">12 {t('settings.hours')}</SelectItem>
-                  <SelectItem value="24">24 {t('settings.hours')}</SelectItem>
+                  <SelectItem value="5">5 {t('settings.minutes')}</SelectItem>
+                  <SelectItem value="15">15 {t('settings.minutes')}</SelectItem>
+                  <SelectItem value="60">1 {t('settings.hours')}</SelectItem>
+                  <SelectItem value="180">3 {t('settings.hours')}</SelectItem>
+                  <SelectItem value="360">6 {t('settings.hours')}</SelectItem>
+                  <SelectItem value="720">12 {t('settings.hours')}</SelectItem>
+                  <SelectItem value="1440">24 {t('settings.hours')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       calendarTitle: settings?.calendarTitle,
       calendarDesc: settings?.calendarDesc,
       language: settings?.language,
-      refreshIntervalHours: settings?.calendarRefreshHours ?? 6,
+      refreshIntervalMinutes: settings?.calendarRefreshMinutes ?? 360,
       alarmDays: settings?.calendarAlarmDays ? JSON.parse(settings.calendarAlarmDays) : [0, 1],
     });
 

@@ -13,7 +13,7 @@ interface CalendarOptions {
   calendarTitle?: string | null;
   calendarDesc?: string | null;
   language?: string;
-  refreshIntervalHours?: number;
+  refreshIntervalMinutes?: number;
   alarmDays?: number[];
 }
 
@@ -31,7 +31,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
     name: 'SubTracker Subscriptions',
     timezone: tz,
     prodId: { company: 'SubTracker', product: 'Subscription Reminders' },
-    ttl: (options?.refreshIntervalHours ?? 6) * 3600,
+    ttl: (options?.refreshIntervalMinutes ?? 360) * 60,
   });
 
   const titleTemplate = options?.calendarTitle || DEFAULT_CALENDAR_TITLE;
