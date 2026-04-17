@@ -12,9 +12,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Advance expired renewals first
-  const renewalResult = await advanceExpiredRenewals();
+  // 1. Send notifications FIRST (so "today" / expired reminders fire before dates are advanced)
   const notifResult = await checkAndSendNotifications();
+  // 2. Then advance expired auto-renew subscriptions
+  const renewalResult = await advanceExpiredRenewals();
 
   return NextResponse.json({
     success: true,

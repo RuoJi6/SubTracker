@@ -19,6 +19,7 @@ export async function advanceExpiredRenewals(): Promise<{
     const expiredSubs = await prisma.subscription.findMany({
       where: {
         isActive: true,
+        autoRenew: true,
         nextRenewalDate: { lte: now },
         NOT: { cycle: 'ONE_TIME' },
       },
