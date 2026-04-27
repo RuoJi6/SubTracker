@@ -251,29 +251,44 @@ export default function StatsCards() {
 
         let subAmount = 0;
         if (sub.autoRenew) {
-          const renewalDate = dayjs(sub.nextRenewalDate);
           const mult = sub.cycleMultiplier || 1;
+          const start = dayjs(sub.startDate);
+          // Months between startDate's month and this bar's month (could be negative for past)
+          const monthsDiff =
+            (monthStart.year() - start.year()) * 12 +
+            (monthStart.month() - start.month());
           switch (sub.cycle) {
             case 'WEEKLY':
+              // Weekly is shown as monthly amortized average (~4.33 weeks/month)
               subAmount = converted * (4.33 / mult);
               break;
             case 'MONTHLY':
-              subAmount = converted / mult;
-              break;
-            case 'QUARTERLY':
-              for (let q = -8; q <= 8; q++) {
-                const d = renewalDate.add(q * 3 * mult, 'month');
-                if (d.isSame(monthStart, 'month')) { subAmount = converted; break; }
+              if (mult === 1) {
+                subAmount = converted; // billed every month
+              } else if (monthsDiff >= 0 && monthsDiff % mult === 0) {
+                subAmount = converted; // billed in this exact month
               }
               break;
-            case 'YEARLY':
-              for (let y = -5; y <= 5; y++) {
-                const d = renewalDate.add(y * mult, 'year');
-                if (d.isSame(monthStart, 'month')) { subAmount = converted; break; }
+            case 'QUARTERLY': {
+              const period = 3 * mult;
+              if (monthsDiff >= 0 && monthsDiff % period === 0) {
+                subAmount = converted;
               }
               break;
+            }
+            case 'YEARLY': {
+              if (
+                monthStart.month() === start.month() &&
+                monthsDiff >= 0 &&
+                (monthStart.year() - start.year()) % mult === 0
+              ) {
+                subAmount = converted;
+              }
+              break;
+            }
             case 'CUSTOM': {
               const cycleDays = sub.customCycleDays || 30;
+              // Amortize custom cycle to monthly
               subAmount = converted * (30 / cycleDays);
               break;
             }
