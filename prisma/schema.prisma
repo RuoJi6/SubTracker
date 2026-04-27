@@ -40,6 +40,8 @@ model NotificationConfig {
   enabled         Boolean      @default(true)
   daysBefore      String       @default("[1]") // JSON array e.g. "[0,1,2]"
   notifyTime      String       @default("09:00")
+  lastSentDate    String?      // YYYY-MM-DD of last successful send (dedup)
+  lastSentDaysUntil Int?       // daysUntil value at last send
   createdAt       DateTime     @default(now())
 
   @@unique([subscriptionId, type])

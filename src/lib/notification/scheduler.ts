@@ -43,11 +43,21 @@ export async function checkAndSendNotifications(): Promise<{
         const daysBefore: number[] = JSON.parse(config.daysBefore);
         if (!daysBefore.includes(daysUntil)) continue;
 
-        // Check time
+        // Time window: only fire when current time is in [notifyTime, notifyTime+30min)
+        // Combined with the 30-min cron interval, this guarantees exactly one trigger.
         const [targetHour, targetMinute] = config.notifyTime.split(':').map(Number);
-        const currentHour = now.hour();
-        const currentMinute = now.minute();
-        if (Math.abs((currentHour * 60 + currentMinute) - (targetHour * 60 + targetMinute)) > 30) {
+        const nowMinutes = now.hour() * 60 + now.minute();
+        const targetMinutes = targetHour * 60 + targetMinute;
+        const diff = nowMinutes - targetMinutes;
+        if (diff < 0 || diff >= 30) {
+          continue;
+        }
+
+        // Dedup: skip if we already sent for this (date, daysUntil) combination
+        if (
+          config.lastSentDate === todayStr &&
+          config.lastSentDaysUntil === daysUntil
+        ) {
           continue;
         }
 
@@ -70,6 +80,7 @@ export async function checkAndSendNotifications(): Promise<{
         };
 
         try {
+          let anySent = false;
           if (config.type === 'DINGTALK' && settings?.dingtalkWebhook) {
             let ok: boolean;
             if (settings.dingtalkTemplate) {
@@ -87,7 +98,7 @@ export async function checkAndSendNotifications(): Promise<{
                 msg
               );
             }
-            if (ok) result.sent++;
+            if (ok) { result.sent++; anySent = true; }
             else result.errors.push(`DingTalk failed for ${sub.name}`);
           }
 
@@ -107,8 +118,15 @@ export async function checkAndSendNotifications(): Promise<{
               `订阅续费提醒 - ${sub.name}`,
               html
             );
-            if (ok) result.sent++;
+            if (ok) { result.sent++; anySent = true; }
             else result.errors.push(`Email failed for ${sub.name}`);
+          }
+
+          if (anySent) {
+            await prisma.notificationConfig.update({
+              where: { id: config.id },
+              data: { lastSentDate: todayStr, lastSentDaysUntil: daysUntil },
+            });
           }
         } catch (err) {
           result.errors.push(`Notification error for ${sub.name}: ${err}`);
