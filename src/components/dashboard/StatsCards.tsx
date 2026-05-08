@@ -158,7 +158,6 @@ export default function StatsCards() {
 
   // Total historical spent: sum of all payments made from startDate to today
   const totalSpentData = useMemo(() => {
-    const now = dayjs();
     const items: {
       key: string; name: string; originalAmount: number; originalCurrency: string;
       cycle: string; cycleMultiplier: number; payments: number; totalSpent: number; startDate: string;
@@ -180,21 +179,32 @@ export default function StatsCards() {
       }
 
       const start = dayjs(sub.startDate);
-      const daysSinceStart = now.diff(start, 'day');
-      if (daysSinceStart < 0) continue;
-
-      let cycleDays: number;
+      const nextRenewalDate = dayjs(sub.nextRenewalDate);
       const m = sub.cycleMultiplier || 1;
-      switch (sub.cycle) {
-        case 'WEEKLY': cycleDays = 7 * m; break;
-        case 'MONTHLY': cycleDays = 30 * m; break;
-        case 'QUARTERLY': cycleDays = 90 * m; break;
-        case 'YEARLY': cycleDays = 365 * m; break;
-        case 'CUSTOM': cycleDays = sub.customCycleDays || 30; break;
-        default: cycleDays = 30;
+      const cycle = sub.cycle;
+
+      let payments = 0;
+      let current = start.startOf('day');
+      const nextDate = nextRenewalDate.startOf('day');
+
+      if (nextDate.isBefore(current)) {
+        payments = 1;
+      } else {
+        let safety = 0;
+        while (current.isBefore(nextDate) && safety < 10000) {
+          payments++;
+          switch (cycle) {
+            case 'WEEKLY': current = current.add(1 * m, 'week'); break;
+            case 'MONTHLY': current = current.add(1 * m, 'month'); break;
+            case 'QUARTERLY': current = current.add(3 * m, 'month'); break;
+            case 'YEARLY': current = current.add(1 * m, 'year'); break;
+            case 'CUSTOM': current = current.add(sub.customCycleDays || 30, 'day'); break;
+            default: current = current.add(1, 'month');
+          }
+          safety++;
+        }
       }
 
-      const payments = Math.floor(daysSinceStart / cycleDays) + 1;
       items.push({
         key: sub.id, name: sub.name, originalAmount: sub.amount,
         originalCurrency: sub.currency, cycle: sub.cycle, cycleMultiplier: m,
@@ -234,7 +244,6 @@ export default function StatsCards() {
   interface BarMonth {
     month: string; monthKey: string; amount: number; items: BarMonthItem[];
   }
-
   const barData = useMemo(() => {
     const now = dayjs();
     const months: BarMonth[] = [];
