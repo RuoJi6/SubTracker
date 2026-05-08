@@ -30,12 +30,7 @@ const navItems = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(max-width: 1024px)').matches;
-    }
-    return false;
-  });
+  const [collapsed, setCollapsed] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { t, locale, setLocale } = useI18n();
@@ -43,9 +38,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Listen for screen size changes
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1024px)');
+    const syncInitial = window.setTimeout(() => setCollapsed(mq.matches), 0);
     const handler = (e: MediaQueryListEvent) => setCollapsed(e.matches);
     mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    return () => {
+      window.clearTimeout(syncInitial);
+      mq.removeEventListener('change', handler);
+    };
   }, []);
 
   const handleLogout = async () => {

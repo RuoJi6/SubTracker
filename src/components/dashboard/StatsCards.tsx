@@ -59,6 +59,42 @@ function convertAmount(
   return amount;
 }
 
+function addCycleDate(date: dayjs.Dayjs, sub: Subscription): dayjs.Dayjs {
+  const mult = sub.cycleMultiplier || 1;
+
+  switch (sub.cycle) {
+    case 'WEEKLY': return date.add(1 * mult, 'week');
+    case 'MONTHLY': return date.add(1 * mult, 'month');
+    case 'QUARTERLY': return date.add(3 * mult, 'month');
+    case 'YEARLY': return date.add(1 * mult, 'year');
+    case 'CUSTOM': return date.add(sub.customCycleDays || 30, 'day');
+    default: return date.add(1, 'month');
+  }
+}
+
+function getPaymentDates(sub: Subscription): dayjs.Dayjs[] {
+  const start = dayjs(sub.startDate).startOf('day');
+  if (!start.isValid()) return [];
+
+  if (sub.cycle === 'ONE_TIME') return [start];
+
+  const nextDate = dayjs(sub.nextRenewalDate).startOf('day');
+  if (!nextDate.isValid()) return [];
+  if (nextDate.isBefore(start)) return [start];
+
+  const dates: dayjs.Dayjs[] = [];
+  let current = start;
+  let safety = 0;
+
+  while (current.isBefore(nextDate) && safety < 10000) {
+    dates.push(current);
+    current = addCycleDate(current, sub);
+    safety++;
+  }
+
+  return dates;
+}
+
 function StatCard({
   icon, title, value, onClick, accent,
 }: {
@@ -169,41 +205,8 @@ export default function StatsCards() {
         amount *= sub.exchangeRateAtPurchase;
       }
 
-      if (sub.cycle === 'ONE_TIME') {
-        items.push({
-          key: sub.id, name: sub.name, originalAmount: sub.amount,
-          originalCurrency: sub.currency, cycle: sub.cycle, cycleMultiplier: 1,
-          payments: 1, totalSpent: amount, startDate: sub.startDate,
-        });
-        continue;
-      }
-
-      const start = dayjs(sub.startDate);
-      const nextRenewalDate = dayjs(sub.nextRenewalDate);
       const m = sub.cycleMultiplier || 1;
-      const cycle = sub.cycle;
-
-      let payments = 0;
-      let current = start.startOf('day');
-      const nextDate = nextRenewalDate.startOf('day');
-
-      if (nextDate.isBefore(current)) {
-        payments = 1;
-      } else {
-        let safety = 0;
-        while (current.isBefore(nextDate) && safety < 10000) {
-          payments++;
-          switch (cycle) {
-            case 'WEEKLY': current = current.add(1 * m, 'week'); break;
-            case 'MONTHLY': current = current.add(1 * m, 'month'); break;
-            case 'QUARTERLY': current = current.add(3 * m, 'month'); break;
-            case 'YEARLY': current = current.add(1 * m, 'year'); break;
-            case 'CUSTOM': current = current.add(sub.customCycleDays || 30, 'day'); break;
-            default: current = current.add(1, 'month');
-          }
-          safety++;
-        }
-      }
+      const payments = getPaymentDates(sub).length;
 
       items.push({
         key: sub.id, name: sub.name, originalAmount: sub.amount,
@@ -239,7 +242,7 @@ export default function StatsCards() {
 
   interface BarMonthItem {
     name: string; amount: number; originalAmount: number;
-    originalCurrency: string; cycle: string; type: 'auto' | 'manual';
+    originalCurrency: string; cycle: string; type: 'auto' | 'manual' | 'one-time';
   }
   interface BarMonth {
     month: string; monthKey: string; amount: number; items: BarMonthItem[];
@@ -252,67 +255,17 @@ export default function StatsCards() {
       const monthEnd = monthStart.endOf('month');
       let total = 0;
       const items: BarMonthItem[] = [];
-      for (const sub of recurring) {
+      for (const sub of subscriptions) {
         let converted = sub.amount;
         if (sub.currency !== displayCurrency && sub.exchangeRateAtPurchase) {
           converted *= sub.exchangeRateAtPurchase;
         }
 
-        let subAmount = 0;
-        if (sub.autoRenew) {
-          const mult = sub.cycleMultiplier || 1;
-          const start = dayjs(sub.startDate);
-          // Months between startDate's month and this bar's month (could be negative for past)
-          const monthsDiff =
-            (monthStart.year() - start.year()) * 12 +
-            (monthStart.month() - start.month());
-          switch (sub.cycle) {
-            case 'WEEKLY':
-              // Weekly is shown as monthly amortized average (~4.33 weeks/month)
-              subAmount = converted * (4.33 / mult);
-              break;
-            case 'MONTHLY':
-              if (mult === 1) {
-                subAmount = converted; // billed every month
-              } else if (monthsDiff >= 0 && monthsDiff % mult === 0) {
-                subAmount = converted; // billed in this exact month
-              }
-              break;
-            case 'QUARTERLY': {
-              const period = 3 * mult;
-              if (monthsDiff >= 0 && monthsDiff % period === 0) {
-                subAmount = converted;
-              }
-              break;
-            }
-            case 'YEARLY': {
-              if (
-                monthStart.month() === start.month() &&
-                monthsDiff >= 0 &&
-                (monthStart.year() - start.year()) % mult === 0
-              ) {
-                subAmount = converted;
-              }
-              break;
-            }
-            case 'CUSTOM': {
-              const cycleDays = sub.customCycleDays || 30;
-              // Amortize custom cycle to monthly
-              subAmount = converted * (30 / cycleDays);
-              break;
-            }
-            default:
-              subAmount = converted;
-          }
-        } else {
-          const renewal = dayjs(sub.nextRenewalDate);
-          if (
-            (renewal.isAfter(monthStart) || renewal.isSame(monthStart, 'day')) &&
-            (renewal.isBefore(monthEnd) || renewal.isSame(monthEnd, 'day'))
-          ) {
-            subAmount = converted;
-          }
-        }
+        const paymentsInMonth = getPaymentDates(sub).filter((date) =>
+          (date.isAfter(monthStart) || date.isSame(monthStart, 'day')) &&
+          (date.isBefore(monthEnd) || date.isSame(monthEnd, 'day'))
+        ).length;
+        const subAmount = converted * paymentsInMonth;
 
         if (subAmount > 0) {
           total += subAmount;
@@ -322,7 +275,7 @@ export default function StatsCards() {
             originalAmount: sub.amount,
             originalCurrency: sub.currency,
             cycle: sub.cycle,
-            type: sub.autoRenew ? 'auto' : 'manual',
+            type: sub.cycle === 'ONE_TIME' ? 'one-time' : (sub.autoRenew ? 'auto' : 'manual'),
           });
         }
       }
@@ -335,7 +288,7 @@ export default function StatsCards() {
       });
     }
     return months;
-  }, [recurring, displayCurrency, locale, barOffset]);
+  }, [subscriptions, displayCurrency, locale, barOffset]);
 
   if (loading) {
     return (
@@ -463,7 +416,7 @@ export default function StatsCards() {
       )}
 
       {/* Charts */}
-      {recurring.length > 0 && (
+      {subscriptions.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card className="glass-card">
             <CardHeader className="pb-2">
@@ -809,8 +762,12 @@ export default function StatsCards() {
                   <span className="font-medium truncate pr-2">{item.name}</span>
                   <span className="text-muted-foreground tabular-nums">{getCurrencySymbol(item.originalCurrency)}{item.originalAmount.toFixed(2)}</span>
                   <span>
-                    <Badge variant={item.type === 'auto' ? 'default' : 'outline'} className="text-xs">
-                      {item.type === 'auto' ? (locale === 'zh' ? '自动' : 'Auto') : (locale === 'zh' ? '手动' : 'Manual')}
+                    <Badge variant={item.type === 'auto' ? 'default' : item.type === 'one-time' ? 'secondary' : 'outline'} className="text-xs">
+                      {item.type === 'auto'
+                        ? (locale === 'zh' ? '自动' : 'Auto')
+                        : item.type === 'one-time'
+                          ? (locale === 'zh' ? '买断' : 'One-time')
+                          : (locale === 'zh' ? '手动' : 'Manual')}
                     </Badge>
                   </span>
                   <span className="text-right font-semibold text-primary tabular-nums">{symbol}{item.amount.toFixed(2)}</span>
