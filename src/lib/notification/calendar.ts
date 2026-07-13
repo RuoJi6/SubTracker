@@ -24,6 +24,27 @@ function dateAtNoonUTC(dateStr: string): Date {
   return new Date(`${dateStr}T12:00:00Z`);
 }
 
+/**
+ * 是否应写入 Apple/ICS 日历。
+ * - 停用：不导出
+ * - 手动续费 / 固定期限：仅「今天及以后」的续费/到期日才导出（已过期不再占日历）
+ * - 自动续费：仍导出（cron 会推进 nextRenewalDate；过去日期仍可能短暂出现直到推进）
+ * - 买断：不按到期日过滤（只有购买日事件）
+ */
+export function shouldExportToCalendar(sub: Subscription, tz: string, now = dayjs()): boolean {
+  if (!sub.isActive) return false;
+  if (sub.cycle === 'ONE_TIME') return true;
+  if (sub.autoRenew && sub.cycle !== 'CUSTOM') return true;
+
+  const today = now.tz(tz).startOf('day');
+  const due = sub.cycle === 'CUSTOM' && sub.endDate
+    ? dayjs(sub.endDate).tz(tz).startOf('day')
+    : dayjs(sub.nextRenewalDate).tz(tz).startOf('day');
+
+  // 仅排除「严格早于今天」的事件；当天续费/到期仍显示
+  return !due.isBefore(today, 'day');
+}
+
 export function generateICalendar(subscriptions: Subscription[], options?: CalendarOptions): string {
   const tz = process.env.TZ || 'Asia/Shanghai';
   const calendar = icalGenerator({
@@ -40,7 +61,7 @@ export function generateICalendar(subscriptions: Subscription[], options?: Calen
   const alarmDays = options?.alarmDays ?? [0, 1];
 
   for (const sub of subscriptions) {
-    if (!sub.isActive) continue;
+    if (!shouldExportToCalendar(sub, tz)) continue;
 
     const cycleDays = getCycleDays(sub.cycle, sub.customCycleDays ?? undefined, sub.cycleMultiplier ?? 1);
     // Extract date in the configured timezone to avoid UTC offset issues
